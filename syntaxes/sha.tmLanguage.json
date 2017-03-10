@@ -10,6 +10,9 @@
 		},
 		{
 			"include": "#strings"
+		},
+		{
+			"include": "#comments"
 		}
 	],
 	"repository": {
@@ -22,7 +25,7 @@
 		"identifiers": {
 			"patterns": [{
 				"name": "variable.other.sha",
-				"match": "\\s--?[[:alnum:]]+\\s"
+				"match": "\\s-[-[:alnum:]]+\\s"
 			}]
 		},
 		"strings": {
@@ -35,6 +38,12 @@
 					"match": "\\\\."
 				}
 			]
+		},
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.hash.sha",
+				"match": "\\#.*"
+			}]
 		}
 	},
 	"scopeName": "source.sha"
