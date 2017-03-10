@@ -1,0 +1,41 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Bash Azure Scrapbook",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#identifiers"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.sha",
+				"match": "\\b(az|acs|cloud|disk|group|lock|policy|role|tag|ad|component|documentdb|image|login|provider|snapshot|vm|appservice|configure|feature|iot|logout|redis|sql|vmss|account|batch|container|feedback|keyvault|network|resource|storage)\\b"
+			}]
+		},
+		"identifiers": {
+			"patterns": [{
+				"name": "variable.other.sha",
+				"match": "\\s--?[[:alnum:]]+\\s"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.sha",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.sha",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.sha"
+}

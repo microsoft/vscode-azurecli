@@ -1,0 +1,34 @@
+{
+    "name": "azurecli",
+    "displayName": "Azure CLI",
+    "description": "Azure CLI Tools",
+    "version": "0.0.1",
+    "publisher": "vscode",
+    "engines": {
+        "vscode": "^1.10.0"
+    },
+    "categories": [
+        "Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "sha",
+            "aliases": ["Bash Azure Scrapbook", "sha"],
+            "extensions": [".sha"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "sha",
+            "scopeName": "source.sha",
+            "path": "./syntaxes/sha.tmLanguage.json"
+        }],
+        "keybindings":[
+            {
+                "command": "workbench.action.terminal.runSelectedText",
+				"key": "ctrl+'",
+				"mac": "cmd+'",
+                "when": "editorTextFocus"
+            }
+        ]
+    }
+}
