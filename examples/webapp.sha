@@ -1,0 +1,28 @@
+# Login and set default subscription
+az login
+az account list
+az account set --subscription "Try Out Subscription"
+PREFIX=<alias>; GROUP=$PREFIX-test; PLAN=$PREFIX-test-plan; WEBAPP=$PREFIX-test-app;
+
+# Create resource group
+az group list
+az group create --name $GROUP --location westus2
+
+# Create plan
+az appservice plan create --name $PLAN --resource-group $GROUP
+
+# Create web app
+az appservice web create --name $WEBAPP --resource-group $GROUP --plan $PLAN
+
+# Deploy static html
+az appservice web source-control config --name $WEBAPP --resource-group $GROUP --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration
+
+# Deploy node app
+az appservice web config update --node-version 6.9.3 --name $WEBAPP --resource-group $GROUP
+az appservice web source-control config --name $WEBAPP --resource-group $GROUP --repo-url "https://github.com/Azure-Samples/app-service-web-nodejs-get-started.git" --branch master --manual-integration
+
+# Browse web app
+az appservice web browse --name $WEBAPP --resource-group $GROUP
+
+# Clean up
+az group delete --name $GROUP
