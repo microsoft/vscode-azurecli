@@ -15,18 +15,35 @@ export function activate(context: ExtensionContext) {
                 const args = subcommand.trim().split(/\s+/);
                 return getCommandMap().then(map => {
                     const node = map[args.join(' ')];
-                    if (node && node.type === 'group') {
-                        resolve(
-                            node.subgroups.map(group => {
-                                const item = new CompletionItem(group.name, CompletionItemKind.Module);
-                                item.documentation = group.description;
-                                return item;
-                            }).concat(node.commands.map(command => {
-                                const item = new CompletionItem(command.name, CompletionItemKind.Function);
-                                item.documentation = command.description;
-                                return item;
-                            }))
-                        );
+                    if (node) {
+                        switch (node.type) {
+                            case 'group':
+                                resolve(
+                                    node.subgroups.map(group => {
+                                        const item = new CompletionItem(group.name, CompletionItemKind.Module);
+                                        item.documentation = group.description;
+                                        return item;
+                                    }).concat(node.commands.map(command => {
+                                        const item = new CompletionItem(command.name, CompletionItemKind.Function);
+                                        item.documentation = command.description;
+                                        return item;
+                                    }))
+                                );
+                                break;
+                            case 'command':
+                                resolve(
+                                    node.parameters.map(parameter => parameter.names.map(name => {
+                                        const item = new CompletionItem(name, CompletionItemKind.Variable);
+                                        item.documentation = parameter.description;
+                                        return item;
+                                    }))
+                                    .reduce((all, list) => all.concat(list), [])
+                                );
+                                break;
+                            default:
+                                resolve([]);
+                                break;
+                        }
                     } else {
                         resolve([]);
                     }

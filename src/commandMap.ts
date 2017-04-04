@@ -2,16 +2,24 @@ import { execFile } from 'child_process';
 import { readFile, writeFile } from 'fs';
 
 export interface Group {
-    name: string;
     type: 'group';
+    name: string;
     description: string;
     subgroups: Group[];
     commands: Command[];
 }
 
 export interface Command {
-    name: string;
     type: 'command';
+    name: string;
+    description: string;
+    parameters: Parameter[];
+}
+
+export interface Parameter {
+    type: 'parameter';
+    names: string[];
+    required: boolean;
     description: string;
 }
 
@@ -73,22 +81,33 @@ function createGroup(name: string, description: string, children: ProcessedEntry
         if (child.children && child.children.length) {
             subgroups.push(createGroup(child.name, child.help, child.children));
         } else {
-            commands.push(createCommand(child.name, child.help));
+            commands.push(createCommand(child));
         }
     }
     return {
-        name,
         type: 'group',
+        name,
         description,
         subgroups,
         commands
     };
 }
 
-function createCommand(name: string, description: string): Command {
+function createCommand({ name, help, parameters }: ProcessedEntry): Command {
     return {
-        name,
         type: 'command',
-        description
+        name,
+        description: help,
+        parameters: Object.keys(parameters)
+            .map(key => createParameter(parameters[key]))
+    };
+}
+
+function createParameter({ name, help, required }: RawParameter): Parameter {
+    return {
+        type: 'parameter',
+        names: name,
+        required: !!required,
+        description: help
     };
 }
