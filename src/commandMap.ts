@@ -15,14 +15,49 @@ export interface Command {
     description: string;
 }
 
+interface RawEntry {
+    help: string;
+    parameters: { [parameterName: string]: RawParameter; };
+    examples?: string;
+}
+
+interface RawParameter {
+    required: string;
+    name: string[];
+    help: string;
+}
+
+interface ProcessedEntry extends RawEntry {
+    name?: string;
+    path?: string;
+    children?: ProcessedEntry[];
+}
+
 export function loadMap(): Promise<Group> {
     return new Promise((resolve, reject) => {
-        readFile(`${__dirname}/../../src/commandMap.json`, 'utf-8', (err, data) => {
+        readFile(`${__dirname}/../../src/help_dump.json`, 'utf-8', (err, data) => {
             if (err) {
                 reject(err);
             } else {
                 try {
-                    resolve(JSON.parse(data))
+                    const raw: { [commandLine: string]: ProcessedEntry; } = JSON.parse(data);
+                    const toplevel: ProcessedEntry[] = [];
+                    for (const path in raw) {
+                        const i = path.lastIndexOf(' ');
+                        const entry = raw[path];
+                        entry.name = i !== -1 ? path.substr(i + 1) : path;
+                        entry.path = path;
+                        if (i !== -1) {
+                            const parent = raw[path.substr(0, i)];
+                            if (parent) {
+                                (parent.children || (parent.children = [])).push(entry);
+                            }
+                        } else {
+                            toplevel.push(entry);
+                        }
+                    }
+                    const az = createGroup('az', '', toplevel);
+                    resolve(az)
                 } catch (e) {
                     reject(e);
                 }
@@ -31,74 +66,29 @@ export function loadMap(): Promise<Group> {
     });
 }
 
-const sectionNameToType = {
-    subgroups: 'group',
-    commands: 'command',
-}
-
-function commandMap(...args: string[]): Promise<Group | Command> {
-    return new Promise((resolve, reject) => {
-        execFile('az', args.concat('--help'), (err, stdout, stderr) => {
-            if (err || stderr) {
-                reject(err || stderr);
-            } else {
-                const sectionTexts = stdout.split(/^(?=\S)/m)
-                    .map(text => text.trim())
-                    .filter(text => !!text);
-                const sectionList = sectionTexts.map(section => {
-                    const sectionName = /^[^:\n]*/.exec(section)[0].toLowerCase();
-                    return {
-                        key: sectionName,
-                        value: section
-                            .split('\n')
-                            .slice(1)
-                            .map(line => line.split(/:(.*)/))
-                            .filter(parts => parts[0] && parts[0].trim())
-                            .map(parts => {
-                                return {
-                                    name: parts[0].trim(),
-                                    type: sectionNameToType[sectionName] || 'other',
-                                    description: parts[1] && parts[1].trim(),
-                                };
-                            })
-                    };
-                }).filter(({ value }) => !!value.length);
-
-                const first = sectionList.shift();
-                const base = {
-                    name: first.value[0].name
-                            .split(' ').slice(-1)[0],
-                    type: first.key,
-                    description: first.value[0].description
-                };
-                if (base.type === 'group') {
-                    Object.assign(base, {
-                        subgroups: [],
-                        commands: []
-                    });
-                }
-                const sectionMap = sectionList.reduce((map, { key, value }) => Object.assign(map, { [key]: value }), base);
-                resolve(sectionMap);
-            }
-        });
-    });
-}
-
-function fullMap(...args: string[]): Promise<Group | Command> {
-    return commandMap(...args).then(map => {
-        if (map.type === 'command') {
-            return map;
+function createGroup(name: string, description: string, children: ProcessedEntry[]): Group {
+    const subgroups: Group[] = [];
+    const commands: Command[] = [];
+    for (const child of children) {
+        if (child.children && child.children.length) {
+            subgroups.push(createGroup(child.name, child.help, child.children));
+        } else {
+            commands.push(createCommand(child.name, child.help));
         }
-        return Promise.all(map.subgroups.map((group, i) => fullMap(...args.concat(group.name)).then(resolved => {
-            map.subgroups[i] = resolved as Group;
-        }, console.error))).then(() => map);
-    });
+    }
+    return {
+        name,
+        type: 'group',
+        description,
+        subgroups,
+        commands
+    };
 }
 
-// fullMap().then(map => {
-//     writeFile('src/commandMap.json', JSON.stringify(map, null, '  '), err => {
-//         if (err) {
-//             console.error(err);
-//         }
-//     });
-// }, console.error);
+function createCommand(name: string, description: string): Command {
+    return {
+        name,
+        type: 'command',
+        description
+    };
+}

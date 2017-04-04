@@ -18,13 +18,11 @@ export function activate(context: ExtensionContext) {
                     if (node && node.type === 'group') {
                         resolve(
                             node.subgroups.map(group => {
-                                console.log(group.name);
-                                const item = new CompletionItem(group.name || 'MISSING', CompletionItemKind.Module);
+                                const item = new CompletionItem(group.name, CompletionItemKind.Module);
                                 item.documentation = group.description;
                                 return item;
                             }).concat(node.commands.map(command => {
-                                console.log(command.name);
-                                const item = new CompletionItem(command.name || 'MISSING', CompletionItemKind.Function);
+                                const item = new CompletionItem(command.name, CompletionItemKind.Function);
                                 item.documentation = command.description;
                                 return item;
                             }))
