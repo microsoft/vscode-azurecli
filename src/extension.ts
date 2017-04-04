@@ -21,10 +21,12 @@ export function activate(context: ExtensionContext) {
                                 resolve(
                                     node.subgroups.map(group => {
                                         const item = new CompletionItem(group.name, CompletionItemKind.Module);
+                                        item.insertText = group.name + ' ';
                                         item.documentation = group.description;
                                         return item;
                                     }).concat(node.commands.map(command => {
                                         const item = new CompletionItem(command.name, CompletionItemKind.Function);
+                                        item.insertText = command.name + ' ';
                                         item.documentation = command.description;
                                         return item;
                                     }))
@@ -34,6 +36,7 @@ export function activate(context: ExtensionContext) {
                                 resolve(
                                     node.parameters.map(parameter => parameter.names.map(name => {
                                         const item = new CompletionItem(name, CompletionItemKind.Variable);
+                                        item.insertText = name + ' ';
                                         item.documentation = parameter.description;
                                         return item;
                                     }))
