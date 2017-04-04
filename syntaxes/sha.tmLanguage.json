@@ -9,17 +9,23 @@
 			"include": "#identifiers"
 		},
 		{
-			"include": "#strings"
+			"include": "#comments"
 		},
 		{
-			"include": "#comments"
+			"include": "#stringsUnquoted"
+		},
+		{
+			"include": "#stringsSingleQuoted"
+		},
+		{
+			"include": "#stringsDoubleQuoted"
 		}
 	],
 	"repository": {
 		"keywords": {
 			"patterns": [{
-				"name": "keyword.control.sha",
-				"match": "\\b(az|acs|cloud|disk|group|lock|policy|role|tag|ad|component|documentdb|image|login|provider|snapshot|vm|appservice|configure|feature|iot|logout|redis|sql|vmss|account|batch|container|feedback|keyvault|network|resource|storage)\\b"
+				"name": "storage.type.sha",
+				"match": "\\b(az|acs|cloud|disk|group|lock|policy|role|tag|ad|component|documentdb|image|login|provider|snapshot|vm|appservice|configure|feature|iot|logout|redis|sql|vmss|account|batch|container|feedback|keyvault|network|resource|storage|list|set|create|plan|web|source-control|config|update|browse|delete)\\b"
 			}]
 		},
 		"identifiers": {
@@ -28,7 +34,24 @@
 				"match": "\\s-[-[:alnum:]]+\\s"
 			}]
 		},
-		"strings": {
+		"stringsUnquoted": {
+			"patterns": [{
+				"name": "string.unquoted.sha",
+				"match": "(?<=^|\\s)[^\\s]+(?=\\s)"
+			}]
+		},
+		"stringsSingleQuoted": {
+			"name": "string.quoted.single.sha",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "constant.character.escape.sha",
+					"match": "\\\\."
+				}
+			]
+		},
+		"stringsDoubleQuoted": {
 			"name": "string.quoted.double.sha",
 			"begin": "\"",
 			"end": "\"",
