@@ -33,8 +33,10 @@ export function activate(context: ExtensionContext) {
                                 );
                                 break;
                             case 'command':
+                                const present = new Set(allMatches(/\s(-[^\s]+)/g, line.text, 1));
                                 resolve(
-                                    node.parameters.map(parameter => parameter.names.map(name => {
+                                    node.parameters.filter(parameter => !parameter.names.some(name => present.has(name)))
+                                    .map(parameter => parameter.names.map(name => {
                                         const item = new CompletionItem(name, CompletionItemKind.Variable);
                                         item.insertText = name + ' ';
                                         item.documentation = parameter.description;
@@ -69,6 +71,17 @@ function indexCommandMap(index: { [path: string]: Group | Command }, path: strin
         (node.commands || []).forEach(command => indexCommandMap(index, current, command));
     }
     return index;
+}
+
+function allMatches(regex: RegExp, string: string, group: number) {
+    return {
+        [Symbol.iterator]: function* () {
+            let m;
+            while (m = regex.exec(string)) {
+                yield m[group];
+            }
+        }
+    }
 }
 
 export function deactivate() {
