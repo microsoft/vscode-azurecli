@@ -43,7 +43,7 @@ interface ProcessedEntry extends RawEntry {
 
 export function loadMap(): Promise<Group> {
     return new Promise((resolve, reject) => {
-        readFile(`${__dirname}/../../src/help_dump.json`, 'utf-8', (err, data) => {
+        readFile(`${__dirname}/../../resources/help_dump.json`, 'utf-8', (err, data) => {
             if (err) {
                 reject(err);
             } else {
