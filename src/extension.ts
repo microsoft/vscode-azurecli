@@ -7,7 +7,7 @@ export function activate(context: ExtensionContext) {
         provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
             return new Promise((resolve, reject) => {
                 const line = document.lineAt(position);
-                const subcommand = (/az(\s+[^-\s][^\s]*)*/.exec(line.text.substr(0, position.character)) || [])[0];
+                const subcommand = (/az(\s+[^-\s][^\s]*)*\s+/.exec(line.text.substr(0, position.character)) || [])[0];
                 if (!subcommand) {
                     resolve([]);
                     return;
