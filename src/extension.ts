@@ -1,76 +1,105 @@
-import { ExtensionContext, Range, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind } from 'vscode';
-import { execFile } from 'child_process';
+import { Uri, ExtensionContext, Range, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
+
 import { loadMap, Group, Command } from './commandMap';
+import { Subscription, SubscriptionWatcher } from './subscriptionWatcher';
+import { Group as ResourceGroup, GroupCache } from './groupCache';
 
 export function activate(context: ExtensionContext) {
-    context.subscriptions.push(languages.registerCompletionItemProvider('sha', {
-        provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
-            return new Promise((resolve, reject) => {
-                const line = document.lineAt(position);
-                const subcommand = (/az(\s+[^-\s][^\s]*)*\s+/.exec(line.text.substr(0, position.character)) || [])[0];
-                if (!subcommand) {
-                    resolve([]);
-                    return;
-                }
-                const args = subcommand.trim().split(/\s+/);
-                return getCommandMap().then(map => {
-                    const node = map[args.join(' ')];
-                    if (node) {
-                        switch (node.type) {
-                            case 'group':
-                                resolve(
-                                    node.subgroups.map(group => {
-                                        const item = new CompletionItem(group.name, CompletionItemKind.Module);
-                                        item.insertText = group.name + ' ';
-                                        item.documentation = group.description;
-                                        return item;
-                                    }).concat(node.commands.map(command => {
-                                        const item = new CompletionItem(command.name, CompletionItemKind.Function);
-                                        item.insertText = command.name + ' ';
-                                        item.documentation = command.description;
-                                        return item;
-                                    }))
-                                );
-                                break;
-                            case 'command':
-                                const present = new Set(allMatches(/\s(-[^\s]+)/g, line.text, 1));
-                                resolve(
-                                    node.parameters.filter(parameter => !parameter.names.some(name => present.has(name)))
-                                    .map(parameter => parameter.names.map(name => {
-                                        const item = new CompletionItem(name, CompletionItemKind.Variable);
-                                        item.insertText = name + ' ';
-                                        item.documentation = parameter.description;
-                                        return item;
-                                    }))
-                                    .reduce((all, list) => all.concat(list), [])
-                                );
-                                break;
-                            default:
-                                resolve([]);
-                                break;
-                        }
-                    } else {
-                        resolve([]);
-                    }
-                });
-            });
-        }
-    }, ' '));
+    const watcher = new SubscriptionWatcher();
+    context.subscriptions.push(watcher);
+    const cache = new GroupCache(watcher);
+    context.subscriptions.push(cache);
+    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap(), cache), ' '));
 }
 
-let commandMap: Promise<{ [path: string]: Group | Command }>;
-function getCommandMap() {
-    return commandMap || (commandMap = loadMap().then(map => indexCommandMap({}, [], map)));
-}
+class AzCompletionItemProvider implements CompletionItemProvider {
 
-function indexCommandMap(index: { [path: string]: Group | Command }, path: string[], node: Group | Command) {
-    const current = path.concat(node.name);
-    index[current.join(' ')] = node;
-    if (node.type === 'group') {
-        (node.subgroups || []).forEach(group => indexCommandMap(index, current, group));
-        (node.commands || []).forEach(command => indexCommandMap(index, current, command));
+    private commandMap: Promise<{ [path: string]: Group | Command }>;
+
+    constructor(map: Promise<Group>, private groupCache: GroupCache) {
+        this.commandMap = this.getCommandMap(map);
     }
-    return index;
+
+    provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
+        return new Promise<CompletionItem[] | CompletionList>(resolve => {
+            const line = document.lineAt(position);
+            const upToCursor = line.text.substr(0, position.character);
+            const subcommand = (/az(\s+[^-\s][^\s]*)*\s+/.exec(upToCursor) || [])[0];
+            if (!subcommand) {
+                resolve([]);
+                return;
+            }
+            const args = subcommand.trim().split(/\s+/);
+            resolve(this.commandMap.then(map => {
+                const node = map[args.join(' ')];
+                if (node) {
+                    switch (node.type) {
+                        case 'group':
+                            return this.getGroupCompletions(node);
+                        case 'command':
+                            const m = /\s(-[^\s]+)\s+[^-\s]*$/.exec(upToCursor);
+                            const parameter = m && m[1];
+                            if (parameter === '-g' || parameter === '--resource-group') {
+                                return this.getResourceGroupCompletions();
+                            } else {
+                                return this.getCommandCompletions(line, node);
+                            }
+                    }
+                }
+                return [];
+            }));
+        });
+    }
+
+    private getGroupCompletions(group: Group) {
+        return group.subgroups.map(group => {
+            const item = new CompletionItem(group.name, CompletionItemKind.Module);
+            item.insertText = group.name + ' ';
+            item.documentation = group.description;
+            return item;
+        }).concat(group.commands.map(command => {
+            const item = new CompletionItem(command.name, CompletionItemKind.Function);
+            item.insertText = command.name + ' ';
+            item.documentation = command.description;
+            return item;
+        }));
+    }
+
+    private getResourceGroupCompletions() {
+        return this.groupCache.fetchGroups().then(groups => {
+            return groups.map(group => {
+                const item = new CompletionItem(group.name, CompletionItemKind.Folder);
+                item.insertText = group.name + ' ';
+                return item;
+            });
+        });
+    }
+
+    private getCommandCompletions(line: TextLine, command: Command) {
+        const parametersPresent = new Set(allMatches(/\s(-[^\s]+)/g, line.text, 1));
+        return command.parameters.filter(parameter => !parameter.names.some(name => parametersPresent.has(name)))
+            .map(parameter => parameter.names.map(name => {
+                const item = new CompletionItem(name, CompletionItemKind.Variable);
+                item.insertText = name + ' ';
+                item.documentation = parameter.description;
+                return item;
+            }))
+            .reduce((all, list) => all.concat(list), []);
+    }
+
+    private getCommandMap(map: Promise<Group>) {
+        return map.then(map => this.indexCommandMap({}, [], map));
+    }
+
+    private indexCommandMap(index: { [path: string]: Group | Command }, path: string[], node: Group | Command) {
+        const current = path.concat(node.name);
+        index[current.join(' ')] = node;
+        if (node.type === 'group') {
+            (node.subgroups || []).forEach(group => this.indexCommandMap(index, current, group));
+            (node.commands || []).forEach(command => this.indexCommandMap(index, current, command));
+        }
+        return index;
+    }
 }
 
 function allMatches(regex: RegExp, string: string, group: number) {

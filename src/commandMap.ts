@@ -1,5 +1,4 @@
-import { execFile } from 'child_process';
-import { readFile, writeFile } from 'fs';
+import { readFile } from 'fs';
 
 export interface Group {
     type: 'group';
@@ -36,8 +35,8 @@ interface RawParameter {
 }
 
 interface ProcessedEntry extends RawEntry {
-    name?: string;
-    path?: string;
+    name: string;
+    path: string;
     children?: ProcessedEntry[];
 }
 
@@ -48,15 +47,15 @@ export function loadMap(): Promise<Group> {
                 reject(err);
             } else {
                 try {
-                    const raw: { [commandLine: string]: ProcessedEntry; } = JSON.parse(data);
+                    const raw: { [commandLine: string]: RawEntry; } = JSON.parse(data);
                     const toplevel: ProcessedEntry[] = [];
                     for (const path in raw) {
                         const i = path.lastIndexOf(' ');
-                        const entry = raw[path];
+                        const entry = raw[path] as ProcessedEntry;
                         entry.name = i !== -1 ? path.substr(i + 1) : path;
                         entry.path = path;
                         if (i !== -1) {
-                            const parent = raw[path.substr(0, i)];
+                            const parent = raw[path.substr(0, i)] as ProcessedEntry;
                             if (parent) {
                                 (parent.children || (parent.children = [])).push(entry);
                             }
