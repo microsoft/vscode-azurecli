@@ -70,7 +70,7 @@ export class GroupCache implements Disposable {
 
         const current = this.current[subscriptionId];
         if (current) {
-            return Promise.race([new Promise(resolve => setTimeout(resolve, 500, current)), update.catch(() => current)]);
+            return Promise.race([new Promise<Group[]>(resolve => setTimeout(resolve, 500, current)), update.catch(() => current)]);
         }
         return update;
     }
