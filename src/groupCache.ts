@@ -4,6 +4,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import * as equal from 'deep-equal';
 import { ResourceManagementClient } from 'azure-arm-resource';
+import { ServiceClientCredentials } from 'ms-rest';
 
 import { Event, EventEmitter, Disposable } from 'vscode';
 
@@ -21,7 +22,7 @@ export class GroupCache implements Disposable {
     private current: { [subscriptionId: string]: Promise<Group[]>; } = {};
     private updates: { [subscriptionId: string]: Promise<Group[]>; } = {};
 
-    private defaultSubscriptionId: string | undefined;
+    private defaultSubscription: Subscription | undefined;
 
     private disposables: Disposable[] = [];
 
@@ -32,51 +33,54 @@ export class GroupCache implements Disposable {
 
     private onSubscriptionUpdated() {
         const defaultSubscription = this.subscriptionWatcher.subscriptions.find(s => s.isDefault);
-        const id = defaultSubscription && defaultSubscription.id;
-        if (this.defaultSubscriptionId !== id) {
-            this.defaultSubscriptionId = id;
-            if (id) {
-                this.updateGroups(id);
+        if ((this.defaultSubscription && this.defaultSubscription.id) !== (defaultSubscription && defaultSubscription.id)) {
+            this.defaultSubscription = defaultSubscription;
+            if (defaultSubscription) {
+                const credentials = this.loginWatcher.lookupCredentials(defaultSubscription.tenantId);
+                if (credentials) {
+                    this.updateGroups(credentials, defaultSubscription);
+                }
             }
         }
     }
 
     async fetchGroups() {
-        if (!this.loginWatcher.credentials) {
+        if (!this.defaultSubscription) {
             throw new UIError('Not logged in, use "az login" to do so.');
         }
-        if (!this.defaultSubscriptionId) {
-            throw new UIError('No subscription set, use "az account set <subscription> to do so.');
+        const credentials = this.loginWatcher.lookupCredentials(this.defaultSubscription.tenantId);
+        if (!credentials) {
+            throw new UIError('Not logged in, use "az login" to do so.');
         }
-        return this.updateGroups(this.defaultSubscriptionId);
+        return this.updateGroups(credentials, this.defaultSubscription);
     }
 
-    private async updateGroups(subscriptionId: string): Promise<Group[]> {
+    private async updateGroups(credentials: ServiceClientCredentials, subscription: Subscription): Promise<Group[]> {
 
-        let update = this.updates[subscriptionId];
+        let update = this.updates[subscription.id];
         if (!update) {
 
-            update = this.loadGroups(subscriptionId);
-            this.updates[subscriptionId] = update;
+            update = this.loadGroups(credentials, subscription);
+            this.updates[subscription.id] = update;
 
             update.then(groups => {
-                delete this.updates[subscriptionId];
-                this.current[subscriptionId] = update;
+                delete this.updates[subscription.id];
+                this.current[subscription.id] = update;
             }, err => {
-                delete this.updates[subscriptionId];
+                delete this.updates[subscription.id];
                 console.error(err);
             });
         }
 
-        const current = this.current[subscriptionId];
+        const current = this.current[subscription.id];
         if (current) {
             return Promise.race([new Promise<Group[]>(resolve => setTimeout(resolve, 500, current)), update.catch(() => current)]);
         }
         return update;
     }
 
-    private async loadGroups(subscriptionId: string): Promise<Group[]> {
-        const client = new ResourceManagementClient(this.loginWatcher.credentials, subscriptionId);
+    private async loadGroups(credentials: ServiceClientCredentials, subscription: Subscription): Promise<Group[]> {
+        const client = new ResourceManagementClient(credentials, subscription.id);
         const groups = await client.resourceGroups.list();
         return groups as Group[];
     }

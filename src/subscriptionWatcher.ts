@@ -10,9 +10,10 @@ interface Profile {
 }
 
 export interface Subscription {
-        name: string;
-        id: string;
-        isDefault: boolean;
+    tenantId: string;
+    name: string;
+    id: string;
+    isDefault: boolean;
 }
 
 export class SubscriptionWatcher implements Disposable {

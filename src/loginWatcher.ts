@@ -7,20 +7,25 @@ import { TokenCredentials, ServiceClientCredentials } from 'ms-rest';
 import { Event, EventEmitter, Disposable } from 'vscode';
 
 interface AccessToken {
-    expiresOn: string;
     accessToken: string;
+    _authority: string;
+    expiresOn: string;
 }
 
 export class LoginWatcher implements Disposable {
 
-    private token: AccessToken;
-    credentials: ServiceClientCredentials;
+    private tokens: AccessToken[];
+    private credentials: { [authority: string]: ServiceClientCredentials } = {};
 
     private timer: NodeJS.Timer;
     private disposed = false;
 
     constructor() {
         this.pollTokens();
+    }
+
+    lookupCredentials(tenantId: string) {
+        return this.credentials[`https://login.microsoftonline.com/${tenantId}`];
     }
 
     private async pollTokens() {
@@ -34,10 +39,9 @@ export class LoginWatcher implements Disposable {
             }
         }
 
-        const token = tokens && tokens[0];
-        if ((this.token && this.token.accessToken) !== (token && token.accessToken)) {
-            this.token = token;
-            this.credentials = token && new TokenCredentials(token.accessToken);
+        if (!equal(this.tokens, tokens, { strict: true })) {
+            this.tokens = tokens;
+            this.credentials = (this.tokens || []).reduce((credentials, token) => Object.assign(credentials, { [token._authority]: new TokenCredentials(token.accessToken) }), {});
         }
         this.timer = setTimeout(() => {
             if (!this.disposed) {
