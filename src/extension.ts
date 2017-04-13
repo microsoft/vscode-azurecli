@@ -1,13 +1,17 @@
-import { Uri, ExtensionContext, Range, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
+import { window, Uri, ExtensionContext, Range, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
 
 import { loadMap, Group, Command } from './commandMap';
 import { Subscription, SubscriptionWatcher } from './subscriptionWatcher';
+import { LoginWatcher } from './loginWatcher';
 import { Group as ResourceGroup, GroupCache } from './groupCache';
+import { UIError } from './utils';
 
 export function activate(context: ExtensionContext) {
-    const watcher = new SubscriptionWatcher();
-    context.subscriptions.push(watcher);
-    const cache = new GroupCache(watcher);
+    const loginWatcher = new LoginWatcher();
+    context.subscriptions.push(loginWatcher);
+    const subscriptionWatcher = new SubscriptionWatcher();
+    context.subscriptions.push(subscriptionWatcher);
+    const cache = new GroupCache(loginWatcher, subscriptionWatcher);
     context.subscriptions.push(cache);
     context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap(), cache), ' '));
 }
@@ -72,6 +76,12 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                 item.insertText = group.name + ' ';
                 return item;
             });
+        }, err => {
+            if (err instanceof UIError) {
+                window.showInformationMessage(err.message);
+                return [];
+            }
+            throw err;
         });
     }
 

@@ -58,6 +58,8 @@
     "@types/mocha": "^2.2.32"
   },
   "dependencies": {
-    "deep-equal": "^1.0.1"
+    "azure-arm-resource": "^2.0.0-preview",
+    "deep-equal": "^1.0.1",
+    "ms-rest": "^2.0.0"
   }
 }
