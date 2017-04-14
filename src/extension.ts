@@ -3,7 +3,7 @@ import { window, ExtensionContext, TextDocument, languages, Position, Cancellati
 import { loadMap, Group, Command } from './commandMap';
 import { SubscriptionWatcher } from './subscriptionWatcher';
 import { LoginWatcher } from './loginWatcher';
-import { GroupCache } from './groupCache';
+import { Cache, Resource, createGroupCache, createWebsiteCache } from './resourceCache';
 import { UIError } from './utils';
 
 export function activate(context: ExtensionContext) {
@@ -11,16 +11,22 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(loginWatcher);
     const subscriptionWatcher = new SubscriptionWatcher();
     context.subscriptions.push(subscriptionWatcher);
-    const cache = new GroupCache(loginWatcher, subscriptionWatcher);
-    context.subscriptions.push(cache);
-    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap(), cache), ' '));
+    const groupCache = createGroupCache(loginWatcher, subscriptionWatcher);
+    context.subscriptions.push(groupCache);
+    const websiteCache = createWebsiteCache(loginWatcher, subscriptionWatcher);
+    context.subscriptions.push(websiteCache);
+    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap(), groupCache, websiteCache), ' '));
 }
 
 class AzCompletionItemProvider implements CompletionItemProvider {
 
     private commandMap: Promise<{ [path: string]: Group | Command }>;
 
-    constructor(map: Promise<Group>, private groupCache: GroupCache) {
+    constructor(
+            map: Promise<Group>,
+            private groupCache: Cache<Resource>,
+            private websiteCache: Cache<Resource>
+        ) {
         this.commandMap = this.getCommandMap(map);
     }
 
@@ -35,7 +41,8 @@ class AzCompletionItemProvider implements CompletionItemProvider {
             }
             const args = subcommand.trim().split(/\s+/);
             resolve(this.commandMap.then(map => {
-                const node = map[args.join(' ')];
+                const normalizedSubcommand = args.join(' ');
+                const node = map[normalizedSubcommand];
                 if (node) {
                     switch (node.type) {
                         case 'group':
@@ -44,7 +51,9 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                             const m = /\s(-[^\s]+)\s+[^-\s]*$/.exec(upToCursor);
                             const parameter = m && m[1];
                             if (parameter === '-g' || parameter === '--resource-group') {
-                                return this.getResourceGroupCompletions();
+                                return this.getResourceCompletions(this.groupCache);
+                            } else if (normalizedSubcommand.startsWith('az appservice web') && parameter === '--name') {
+                                return this.getResourceCompletions(this.websiteCache);
                             } else {
                                 return this.getCommandCompletions(line, node);
                             }
@@ -69,11 +78,11 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         }));
     }
 
-    private getResourceGroupCompletions() {
-        return this.groupCache.fetchGroups().then(groups => {
-            return groups.map(group => {
-                const item = new CompletionItem(group.name, CompletionItemKind.Folder);
-                item.insertText = group.name + ' ';
+    private getResourceCompletions<T extends Resource>(cache: Cache<T>) {
+        return cache.fetch().then(resources => {
+            return resources.map(resource => {
+                const item = new CompletionItem(resource.name, CompletionItemKind.Folder);
+                item.insertText = resource.name + ' ';
                 return item;
             });
         }, err => {
