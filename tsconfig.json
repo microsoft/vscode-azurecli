@@ -3,6 +3,7 @@
         "module": "commonjs",
         "target": "es6",
         "strictNullChecks": true,
+        "noUnusedLocals": true,
         "outDir": "out",
         "lib": [
             "es6"

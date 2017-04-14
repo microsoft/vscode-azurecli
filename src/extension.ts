@@ -1,9 +1,9 @@
-import { window, Uri, ExtensionContext, Range, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
+import { window, ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
 
 import { loadMap, Group, Command } from './commandMap';
-import { Subscription, SubscriptionWatcher } from './subscriptionWatcher';
+import { SubscriptionWatcher } from './subscriptionWatcher';
 import { LoginWatcher } from './loginWatcher';
-import { Group as ResourceGroup, GroupCache } from './groupCache';
+import { GroupCache } from './groupCache';
 import { UIError } from './utils';
 
 export function activate(context: ExtensionContext) {

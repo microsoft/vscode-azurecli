@@ -4,7 +4,7 @@ import { homedir } from 'os';
 import * as equal from 'deep-equal';
 import { TokenCredentials, ServiceClientCredentials } from 'ms-rest';
 
-import { Event, EventEmitter, Disposable } from 'vscode';
+import { Disposable } from 'vscode';
 
 interface AccessToken {
     accessToken: string;

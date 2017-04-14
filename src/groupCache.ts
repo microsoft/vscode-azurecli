@@ -1,12 +1,7 @@
-import { readFile } from 'fs';
-import { execFile } from 'child_process';
-import { join } from 'path';
-import { homedir } from 'os';
-import * as equal from 'deep-equal';
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { ServiceClientCredentials } from 'ms-rest';
 
-import { Event, EventEmitter, Disposable } from 'vscode';
+import { Disposable } from 'vscode';
 
 import { Subscription, SubscriptionWatcher } from './subscriptionWatcher';
 import { LoginWatcher } from './loginWatcher';
@@ -63,7 +58,7 @@ export class GroupCache implements Disposable {
             update = this.loadGroups(credentials, subscription);
             this.updates[subscription.id] = update;
 
-            update.then(groups => {
+            update.then(() => {
                 delete this.updates[subscription.id];
                 this.current[subscription.id] = update;
             }, err => {
@@ -83,24 +78,6 @@ export class GroupCache implements Disposable {
         const client = new ResourceManagementClient(credentials, subscription.id);
         const groups = await client.resourceGroups.list();
         return groups as Group[];
-    }
-
-    private loadGroupsOld(subscriptionId: string): Promise<Group[]> {
-        return new Promise((resolve, reject) => {
-            execFile('az', ['group', 'list'], (err, stdout, stderr) => {
-                if (err || stderr) {
-                    reject(err || stderr);
-                } else {
-                    const groups: Group[] = JSON.parse(stdout);
-                    const filtered: Group[] = groups.filter(group => group.id.startsWith(`/subscriptions/${subscriptionId}/`));
-                    if (groups.length && !filtered.length) {
-                        reject('Subscription changed');
-                    } else {
-                        resolve(filtered);
-                    }
-                }
-            });
-        });
     }
 
     dispose() {

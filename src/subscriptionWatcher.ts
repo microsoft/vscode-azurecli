@@ -3,7 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import * as equal from 'deep-equal';
 
-import { Event, EventEmitter, Disposable } from 'vscode';
+import { EventEmitter, Disposable } from 'vscode';
 
 interface Profile {
     subscriptions: Subscription[];
