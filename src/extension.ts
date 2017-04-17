@@ -63,7 +63,9 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                             } else if (parameter) {
                                 return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter);
                             } else {
-                                return this.getCommandCompletions(line, node);
+                                const m = /\s(--?[^\s]*)$/.exec(upToCursor);
+                                const prefix = m && m[1] || '';
+                                return this.getCommandCompletions(line, node, prefix);
                             }
                     }
                 }
@@ -102,12 +104,14 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         });
     }
 
-    private getCommandCompletions(line: TextLine, command: Command) {
+    private getCommandCompletions(line: TextLine, command: Command, prefix: string) {
+        const m = /^-*/.exec(prefix);
+        const lead = m ? m[0] : '';
         const parametersPresent = new Set(allMatches(/\s(-[^\s]+)/g, line.text, 1));
         return command.parameters.filter(parameter => !parameter.names.some(name => parametersPresent.has(name)))
-            .map(parameter => parameter.names.map(name => {
+            .map(parameter => parameter.names.filter(name => name.startsWith(lead)).map(name => {
                 const item = new CompletionItem(name, CompletionItemKind.Variable);
-                item.insertText = name + ' ';
+                item.insertText = name.substr(lead.length) + ' ';
                 item.documentation = parameter.description;
                 return item;
             }))
