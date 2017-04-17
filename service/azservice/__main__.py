@@ -52,7 +52,8 @@ def get_completions(command_table, query):
         argument_name = query['argument']
         if argument_name in command.arguments:
             argument = command.arguments[argument_name]
-            # TODO: choices
+            if argument.choices:
+                return argument.choices
             if argument.completer:
                 try:
                     return argument.completer('', 'action?', {})
