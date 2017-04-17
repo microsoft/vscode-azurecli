@@ -9,8 +9,17 @@ az configure --defaults group=tryout-test web=tryout-test
 # Create web app
 az appservice plan create --name tryout-test
 az appservice web create --name tryout-test --plan tryout-test 
-az appservice web source-control config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
 az appservice web browse
+
+# Set up deployment
+az appservice web deployment user set --user-name --password
+az appservice web source-control config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
+
+# Tailing
+az appservice web log tail --name myExpressApp-chrisdias
+
+# Restart website
+az appservice web restart --name myExpressApp-chrisdias
 
 # Create DocumentDB
 az documentdb create --name tryout-test
@@ -18,3 +27,5 @@ az documentdb show --name tryout-test
 
 # Clean up
 az group delete --name tryout-test
+
+
