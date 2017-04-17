@@ -38,6 +38,7 @@ jspm_packages
 
 # Build output
 out
+*.pyc
 
 # OS
 .DS_Store
