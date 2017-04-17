@@ -26,7 +26,7 @@ export class AzService {
                 try {
                     resolve(JSON.parse(line).map(name => {
                         const item = new CompletionItem(name, CompletionItemKind.EnumMember);
-                        item.insertText = name + ' ';
+                        item.insertText = (name.indexOf(' ') !== -1 ? `"${name}"` : name) + ' ';
                         return item;
                     }));
                 } catch (err) {
