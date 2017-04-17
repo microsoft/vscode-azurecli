@@ -1,28 +1,20 @@
 # Login and set default subscription
-az login
-az account list
-az account set --subscription "Try Out Subscription"
-PREFIX=<alias>; GROUP=$PREFIX-test; PLAN=$PREFIX-test-plan; WEBAPP=$PREFIX-test-app;
+az login 
+az account set --subscription "Try Out Subscription" 
 
 # Create resource group
-az group list
-az group create --name $GROUP --location westus2
-
-# Create plan
-az appservice plan create --name $PLAN --resource-group $GROUP
+az group create --name tryout-test --location westus2 
+az configure --defaults group=tryout-test web=tryout-test
 
 # Create web app
-az appservice web create --name $WEBAPP --resource-group $GROUP --plan $PLAN
+az appservice plan create --name tryout-test
+az appservice web create --name tryout-test --plan tryout-test 
+az appservice web source-control config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
+az appservice web browse
 
-# Deploy static html
-az appservice web source-control config --name $WEBAPP --resource-group $GROUP --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration
-
-# Deploy node app
-az appservice web config update --node-version 6.9.3 --name $WEBAPP --resource-group $GROUP
-az appservice web source-control config --name $WEBAPP --resource-group $GROUP --repo-url "https://github.com/Azure-Samples/app-service-web-nodejs-get-started.git" --branch master --manual-integration
-
-# Browse web app
-az appservice web browse --name $WEBAPP --resource-group $GROUP
+# Create DocumentDB
+az documentdb create --name tryout-test
+az documentdb show --name tryout-test
 
 # Clean up
-az group delete --name $GROUP
+az group delete --name tryout-test
