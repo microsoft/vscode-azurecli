@@ -59,12 +59,10 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     private getGroupCompletions(group: Group) {
         return group.subgroups.map(group => {
             const item = new CompletionItem(group.name, CompletionItemKind.Module);
-            item.insertText = group.name + ' ';
             item.documentation = group.description;
             return item;
         }).concat(group.commands.map(command => {
             const item = new CompletionItem(command.name, CompletionItemKind.Function);
-            item.insertText = command.name + ' ';
             item.documentation = command.description;
             return item;
         }));
@@ -77,7 +75,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         return command.parameters.filter(parameter => !parameter.names.some(name => parametersPresent.has(name)))
             .map(parameter => parameter.names.filter(name => name.startsWith(lead)).map(name => {
                 const item = new CompletionItem(name, CompletionItemKind.Variable);
-                item.insertText = name.substr(lead.length) + ' ';
+                item.insertText = name.substr(lead.length);
                 item.documentation = parameter.description;
                 return item;
             }))

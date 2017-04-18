@@ -26,7 +26,9 @@ export class AzService {
                 try {
                     resolve(JSON.parse(line).map(name => {
                         const item = new CompletionItem(name, CompletionItemKind.EnumMember);
-                        item.insertText = (name.indexOf(' ') !== -1 ? `"${name}"` : name) + ' ';
+                        if (name.indexOf(' ') !== -1) {
+                            item.insertText = `"${name}"`;
+                        }
                         return item;
                     }));
                 } catch (err) {
@@ -35,7 +37,7 @@ export class AzService {
             });
             if (this.process) {
                 const data = JSON.stringify({ command, argument });
-                this.process.stdin.write(data + '\n', 'utf8'); // TODO
+                this.process.stdin.write(data + '\n', 'utf8');
             } else {
                 resolve([]);
             }
@@ -47,7 +49,7 @@ export class AzService {
         this.process.stdout.setEncoding('utf8');
         this.process.stdout.on('data', data => {
             this.data += data;
-            const nl = this.data.indexOf('\n'); // TODO
+            const nl = this.data.indexOf('\n');
             if (nl !== -1 && this.listeners.length) {
                 const line = this.data.substr(0, nl);
                 this.data = this.data.substr(nl + 1);

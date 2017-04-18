@@ -42,9 +42,7 @@ export class Cache<T extends Resource> implements Disposable {
     async getCompletions() {
         return this.fetch().then(resources => {
             return resources.map(resource => {
-                const item = new CompletionItem(resource.name, CompletionItemKind.Folder);
-                item.insertText = resource.name + ' ';
-                return item;
+                return new CompletionItem(resource.name, CompletionItemKind.Folder);
             });
         }, err => {
             if (err instanceof UIError) {
