@@ -5,21 +5,10 @@
 import { ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
 
 import { loadMap, Group, Command } from './commandMap';
-import { SubscriptionWatcher } from './subscriptionWatcher';
-import { LoginWatcher } from './loginWatcher';
-import { Cache, Resource, createGroupCache, createWebsiteCache } from './resourceCache';
 import { AzService } from './azService';
 
 export function activate(context: ExtensionContext) {
-    const loginWatcher = new LoginWatcher();
-    context.subscriptions.push(loginWatcher);
-    const subscriptionWatcher = new SubscriptionWatcher();
-    context.subscriptions.push(subscriptionWatcher);
-    const groupCache = createGroupCache(loginWatcher, subscriptionWatcher);
-    context.subscriptions.push(groupCache);
-    const websiteCache = createWebsiteCache(loginWatcher, subscriptionWatcher);
-    context.subscriptions.push(websiteCache);
-    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap(), groupCache, websiteCache), ' '));
+    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(loadMap()), ' '));
 }
 
 class AzCompletionItemProvider implements CompletionItemProvider {
@@ -28,9 +17,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     private azService = new AzService();
 
     constructor(
-            map: Promise<Group>,
-            private groupCache: Cache<Resource>,
-            private websiteCache: Cache<Resource>
+            map: Promise<Group>
         ) {
         this.commandMap = this.getCommandMap(map);
     }
@@ -55,11 +42,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                         case 'command':
                             const m = /\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor);
                             const parameter = m && m[1];
-                            if (parameter === '-g' || parameter === '--resource-group') {
-                                return this.groupCache.getCompletions();
-                            } else if (normalizedSubcommand.startsWith('az appservice web') && parameter === '--name') {
-                                return this.websiteCache.getCompletions();
-                            } else if (parameter) {
+                            if (parameter) {
                                 return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter);
                             } else {
                                 const m = /\s(--?[^\s]*)$/.exec(upToCursor);
