@@ -2,13 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { window, ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
+import { ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
 
 import { loadMap, Group, Command } from './commandMap';
 import { SubscriptionWatcher } from './subscriptionWatcher';
 import { LoginWatcher } from './loginWatcher';
 import { Cache, Resource, createGroupCache, createWebsiteCache } from './resourceCache';
-import { UIError } from './utils';
 import { AzService } from './azService';
 
 export function activate(context: ExtensionContext) {
@@ -57,9 +56,9 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                             const m = /\s--?([^\s]+)\s+[^-\s]*$/.exec(upToCursor); // TODO: single vs double dash
                             const parameter = m && m[1];
                             if (parameter === 'g' || parameter === 'resource-group') {
-                                return this.getResourceCompletions(this.groupCache);
+                                return this.groupCache.getCompletions();
                             } else if (normalizedSubcommand.startsWith('az appservice web') && parameter === 'name') {
-                                return this.getResourceCompletions(this.websiteCache);
+                                return this.websiteCache.getCompletions();
                             } else if (parameter) {
                                 return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter);
                             } else {
@@ -86,22 +85,6 @@ class AzCompletionItemProvider implements CompletionItemProvider {
             item.documentation = command.description;
             return item;
         }));
-    }
-
-    private getResourceCompletions<T extends Resource>(cache: Cache<T>) {
-        return cache.fetch().then(resources => {
-            return resources.map(resource => {
-                const item = new CompletionItem(resource.name, CompletionItemKind.Folder);
-                item.insertText = resource.name + ' ';
-                return item;
-            });
-        }, err => {
-            if (err instanceof UIError) {
-                window.showInformationMessage(err.message);
-                return [];
-            }
-            throw err;
-        });
     }
 
     private getCommandCompletions(line: TextLine, command: Command, prefix: string) {

@@ -1,7 +1,7 @@
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { ServiceClientCredentials } from 'ms-rest';
 
-import { Disposable } from 'vscode';
+import { Disposable, window, CompletionItem, CompletionItemKind } from 'vscode';
 
 import { Subscription, SubscriptionWatcher } from './subscriptionWatcher';
 import { LoginWatcher } from './loginWatcher';
@@ -28,7 +28,7 @@ export function createWebsiteCache(loginWatcher: LoginWatcher, subscriptionWatch
     });
 }
 
-export class Cache<T> implements Disposable {
+export class Cache<T extends Resource> implements Disposable {
 
     private current: { [subscriptionId: string]: Promise<T[]>; } = {};
     private updates: { [subscriptionId: string]: Promise<T[]>; } = {};
@@ -39,7 +39,23 @@ export class Cache<T> implements Disposable {
         private load: (credentials: ServiceClientCredentials, subscription: Subscription) => Promise<T[]>) {
     }
 
-    async fetch() {
+    async getCompletions() {
+        return this.fetch().then(resources => {
+            return resources.map(resource => {
+                const item = new CompletionItem(resource.name, CompletionItemKind.Folder);
+                item.insertText = resource.name + ' ';
+                return item;
+            });
+        }, err => {
+            if (err instanceof UIError) {
+                window.showInformationMessage(err.message);
+                return [];
+            }
+            throw err;
+        });
+    }
+
+    private async fetch() {
         const defaultSubscription = this.subscriptionWatcher.subscriptions.find(s => s.isDefault);
         if (!defaultSubscription) {
             throw new UIError('Not logged in, use "az login" to do so.');
