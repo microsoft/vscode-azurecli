@@ -45,13 +45,13 @@ def load_profile():
 
     ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
 
-def get_completions(command_table, query):
+def get_completions(command_table, query, verbose=False):
     command_name = query['command']
     if command_name in command_table:
         command = command_table[command_name]
         argument_name = query['argument']
-        if argument_name in command.arguments:
-            argument = command.arguments[argument_name]
+        argument = get_argument(command, argument_name)
+        if argument:
             if argument.choices:
                 return argument.choices
             if argument.completer:
@@ -64,8 +64,16 @@ def get_completions(command_table, query):
                         try:
                             return argument.completer()
                         except TypeError:
-                            pass
+                            if verbose: print('Completer not run ({} {})'.format(command_name, argument_name), file=stderr)
+            elif verbose: print('Completions not found ({} {})'.format(command_name, argument_name), file=stderr)
+        elif verbose: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
+    elif verbose: print('Command not found ({})'.format(command_name), file=stderr)
     return []
+
+def get_argument(command, argument_name):
+    for argument in command.arguments.values():
+        if argument_name in argument.options_list:
+            return argument
 
 load_profile()
 
@@ -74,7 +82,7 @@ command_table = load_command_table()
 while True:
     line = stdin.readline()
     query = json.loads(line)
-    completions = get_completions(command_table, query)
+    completions = get_completions(command_table, query, True)
     output = json.dumps(completions)
     print(output)
     stdout.flush()

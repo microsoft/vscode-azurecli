@@ -53,11 +53,11 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                         case 'group':
                             return this.getGroupCompletions(node);
                         case 'command':
-                            const m = /\s--?([^\s]+)\s+[^-\s]*$/.exec(upToCursor); // TODO: single vs double dash
+                            const m = /\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor);
                             const parameter = m && m[1];
-                            if (parameter === 'g' || parameter === 'resource-group') {
+                            if (parameter === '-g' || parameter === '--resource-group') {
                                 return this.groupCache.getCompletions();
-                            } else if (normalizedSubcommand.startsWith('az appservice web') && parameter === 'name') {
+                            } else if (normalizedSubcommand.startsWith('az appservice web') && parameter === '--name') {
                                 return this.websiteCache.getCompletions();
                             } else if (parameter) {
                                 return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter);
