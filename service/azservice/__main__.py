@@ -83,8 +83,8 @@ while True:
     line = stdin.readline()
     query = json.loads(line)
     completions = get_completions(command_table, query, True)
-    output = json.dumps(completions)
+    output = json.dumps({ 'sequence': query['sequence'], 'completions': completions })
     print(output)
     stdout.flush()
 
-# {"command":"appservice web browse","argument":"name"}
+# {"sequence":4,"command":"appservice web browse","argument":"--name"}
