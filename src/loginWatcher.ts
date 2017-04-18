@@ -9,7 +9,8 @@ import { Disposable } from 'vscode';
 interface AccessToken {
     accessToken: string;
     _authority: string;
-    expiresOn: string;
+    expiresOn: string; // TODO: Check if expired and use refreshToken to refresh.
+    refreshToken: string;
 }
 
 export class LoginWatcher implements Disposable {
