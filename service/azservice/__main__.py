@@ -84,6 +84,7 @@ def get_argument(command, argument_name):
     for name, argument in command.arguments.items():
         if argument_name in argument.options_list:
             return name, argument
+    return None, None
 
 def add_defaults(command, arguments):
     # TODO Needs change in CLI module that removes 'configured_default' from argument.type.settings (here copied to argument.type).

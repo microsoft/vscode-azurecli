@@ -35,11 +35,23 @@
         "path": "./syntaxes/sha.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "ms-azurecli.runLineInEditor",
+        "title": "Run Line and Show in Editor"
+      }
+    ],
     "keybindings": [
       {
         "command": "workbench.action.terminal.runSelectedText",
         "key": "ctrl+'",
         "mac": "cmd+'",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "ms-azurecli.runLineInEditor",
+        "key": "ctrl+shift+'",
+        "mac": "cmd+shift+'",
         "when": "editorTextFocus"
       }
     ]
@@ -52,7 +64,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^2.2.32",
-    "@types/node": "^6.0.40",
+    "@types/node": "^7.0.13",
     "mocha": "^2.3.3",
     "tslint": "^5.1.0",
     "typescript": "^2.0.3",
