@@ -14,6 +14,7 @@ from azure.cli.core.application import APPLICATION
 from azure.cli.core.commands import _update_command_definitions
 from azure.cli.core._session import ACCOUNT
 from azure.cli.core._environment import get_config_dir as cli_config_dir
+from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 
 
 def load_command_table():
@@ -56,7 +57,9 @@ def get_completions(command_table, query, verbose=False):
                 return argument.choices
             if argument.completer:
                 try:
-                    return argument.completer('', '', get_parsed_args(command, query['arguments']))
+                    args = get_parsed_args(command, query['arguments'])
+                    add_defaults(command, args)
+                    return argument.completer('', '', args)
                 except TypeError:
                     try:
                         return argument.completer('')
@@ -81,6 +84,33 @@ def get_argument(command, argument_name):
     for name, argument in command.arguments.items():
         if argument_name in argument.options_list:
             return name, argument
+
+def add_defaults(command, arguments):
+    # TODO Needs change in CLI module that removes 'configured_default' from argument.type.settings (here copied to argument.type).
+    # azure/cli/core/commands/__init__.py:
+    #     if 'configured_default' in overrides.settings:
+    #         def_config = overrides.settings.pop('configured_default', None)
+    #         setattr(arg.type, 'configured_default', def_config) <<< Added line
+    reloaded = False
+    for name, argument in command.arguments.items():
+        if not hasattr(arguments, name) and hasattr(argument.type, 'configured_default'):
+            if not reloaded:
+                reload_config()
+                reloaded = True
+            default = find_default(argument.type.configured_default)
+            if default:
+                setattr(arguments, name, default)
+
+    return arguments
+
+def reload_config():
+    az_config.config_parser.read(GLOBAL_CONFIG_PATH)
+
+def find_default(default_name):
+    try:
+        return az_config.get(DEFAULTS_SECTION, default_name, None)
+    except configparser.NoSectionError:
+        return None
 
 load_profile()
 
