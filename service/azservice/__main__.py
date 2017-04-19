@@ -50,13 +50,13 @@ def get_completions(command_table, query, verbose=False):
     if command_name in command_table:
         command = command_table[command_name]
         argument_name = query['argument']
-        argument = get_argument(command, argument_name)
+        _, argument = get_argument(command, argument_name)
         if argument:
             if argument.choices:
                 return argument.choices
             if argument.completer:
                 try:
-                    return argument.completer('', 'action?', {})
+                    return argument.completer('', '', get_parsed_args(command, query['arguments']))
                 except TypeError:
                     try:
                         return argument.completer('')
@@ -70,10 +70,17 @@ def get_completions(command_table, query, verbose=False):
     elif verbose: print('Command not found ({})'.format(command_name), file=stderr)
     return []
 
+def get_parsed_args(command, arguments):
+    result = lambda: None
+    for argument_name, value in arguments.items():
+        name, _ = get_argument(command, argument_name)
+        setattr(result, name, value)
+    return result
+
 def get_argument(command, argument_name):
-    for argument in command.arguments.values():
+    for name, argument in command.arguments.items():
         if argument_name in argument.options_list:
-            return argument
+            return name, argument
 
 load_profile()
 
@@ -87,4 +94,6 @@ while True:
     print(output)
     stdout.flush()
 
-# {"sequence":4,"command":"appservice web browse","argument":"--name"}
+# {"sequence":3,"command":"appservice web browse","argument":"--resource-group","arguments": {}}
+# {"sequence":4,"command":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}
+# {"sequence":5,"command":"appservice web browse","argument":"--name","arguments":{}}

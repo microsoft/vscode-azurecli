@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, TextLine } from 'vscode';
+import { ExtensionContext, TextDocument, languages, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider } from 'vscode';
 
 import { loadMap, Group, Command } from './commandMap';
 import { AzService } from './azService';
@@ -40,14 +40,15 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                         case 'group':
                             return this.getGroupCompletions(node);
                         case 'command':
+                            const parameters = this.getParameters(line.text);
                             const m = /\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor);
                             const parameter = m && m[1];
                             if (parameter) {
-                                return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter);
+                                return this.azService.getCompletions(normalizedSubcommand.substr(3), parameter, parameters);
                             } else {
                                 const m = /\s(--?[^\s]*)$/.exec(upToCursor);
                                 const prefix = m && m[1] || '';
-                                return this.getCommandCompletions(line, node, prefix);
+                                return this.getCommandCompletions(node, prefix, parameters);
                             }
                     }
                 }
@@ -68,11 +69,29 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         }));
     }
 
-    private getCommandCompletions(line: TextLine, command: Command, prefix: string) {
+    private getParameters(line: string) {
+        const parameters: { [parameter: string]: string | undefined; } = {};
+        let name: string | undefined;
+        for (const match of allMatches(/-[^\s"']*|"[^"]*"|'[^']*'|[^\s"']+/g, line, 0)) {
+            if (match.startsWith('-')) {
+                name = match as string;
+                if (!(name in parameters)) {
+                    parameters[name] = undefined;
+                }
+            } else {
+                if (name) {
+                    parameters[name] = match;
+                }
+                name = undefined;
+            }
+        }
+        return parameters;
+    }
+
+    private getCommandCompletions(command: Command, prefix: string, parameters: { [parameter: string]: string | undefined; }) {
         const m = /^-*/.exec(prefix);
         const lead = m ? m[0] : '';
-        const parametersPresent = new Set(allMatches(/\s(-[^\s]+)/g, line.text, 1));
-        return command.parameters.filter(parameter => !parameter.names.some(name => parametersPresent.has(name)))
+        return command.parameters.filter(parameter => !parameter.names.some(name => name in parameters))
             .map(parameter => parameter.names.filter(name => name.startsWith(lead)).map(name => {
                 const item = new CompletionItem(name, CompletionItemKind.Variable);
                 item.insertText = name.substr(lead.length);

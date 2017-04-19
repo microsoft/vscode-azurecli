@@ -23,7 +23,7 @@ export class AzService {
         this.spawn();
     }
 
-    getCompletions(command: string, argument: string) {
+    getCompletions(command: string, argument: string, args: { [parameter: string]: string | undefined; }) {
         if (!this.process) {
             this.spawn();
         }
@@ -43,7 +43,7 @@ export class AzService {
                 }
             };
             if (this.process) {
-                const data = JSON.stringify({ sequence, command, argument });
+                const data = JSON.stringify({ sequence, command, argument, arguments: args });
                 this.process.stdin.write(data + '\n', 'utf8');
             } else {
                 resolve([]);
