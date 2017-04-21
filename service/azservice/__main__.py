@@ -19,6 +19,26 @@ from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTI
 from azure.cli.core.help_files import helps
 
 
+global_arguments = {
+    'verbose': {
+        'options': ['--verbose'],
+        'help': 'Increase logging verbosity. Use --debug for full debug logs.'
+    },
+    'debug': {
+        'options': ['--debug'],
+        'help': 'Increase logging verbosity to show all debug logs.'
+    },
+    'output': {
+        'options': ['--output', '-o'],
+        'help': 'Output format',
+        'choices': ['json', 'tsv', 'table', 'jsonc']
+    },
+    'help': {
+        'options': ['--help', '-h'],
+        'help': 'Get more information about a command'
+    }
+}
+
 def load_command_table():
     command_table = APPLICATION.configuration.get_command_table()
     install_modules(command_table)
@@ -83,7 +103,8 @@ def get_completions(group_index, command_table, query, verbose=False):
         return get_parameter_value_completions(command_table, query, verbose)
     command_name = query['subcommand']
     if command_name in command_table:
-        return get_parameter_name_completions(command_table, query, verbose)
+        return get_parameter_name_completions(command_table, query, verbose) + \
+            get_global_parameter_name_completions(query, verbose)
     if command_name in group_index:
         return group_index[command_name]
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
@@ -102,7 +123,8 @@ def get_parameter_name_completions(command_table, query, verbose=False):
     } for argument in unused for option in argument.options_list ]
 
 def get_parameter_value_completions(command_table, query, verbose=False):
-    list = get_parameter_value_list(command_table, query, verbose)
+    list = get_parameter_value_list(command_table, query, verbose) + \
+        get_global_parameter_value_list(query, verbose)
     return [ {
         'name': item,
         'kind': 'argument_value'
@@ -131,7 +153,7 @@ def get_parameter_value_list(command_table, query, verbose=False):
                         except TypeError:
                             if verbose: print('Completer not run ({} {})'.format(command_name, argument_name), file=stderr)
             elif verbose: print('Completions not found ({} {})'.format(command_name, argument_name), file=stderr)
-        elif verbose: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
+        elif verbose and not [ a for a in global_arguments.values() if argument_name in a['options'] ]: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
     elif verbose: print('Command not found ({})'.format(command_name), file=stderr)
     return []
 
@@ -175,6 +197,25 @@ def find_default(default_name):
     except configparser.NoSectionError:
         return None
 
+def get_global_parameter_name_completions(query, verbose=False):
+    arguments = query['arguments']
+    unused = [ argument for argument in global_arguments.values()
+        if not [ option for option in argument['options'] if option in arguments ] ]
+    return [ {
+        'name': option,
+        'kind': 'argument_name',
+        'description': argument.get('help')
+    } for argument in unused for option in argument['options'] ]
+
+def get_global_parameter_value_list(query, verbose=False):
+    argument_name = query['argument']
+    argument = next((argument for argument in global_arguments.values() if argument_name in argument['options']), None)
+    if argument:
+        if 'choices' in argument:
+            return argument['choices']
+        elif verbose: print('Completions not found ({})'.format(argument_name), file=stderr)
+    return []
+
 load_profile()
 
 command_table = load_command_table()
@@ -196,6 +237,8 @@ while True:
 # {"sequence":4,"query":{"subcommand":"appservice web"}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--resource-group":null}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--output":"table"}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--resource-group","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--output","arguments": {}}}
