@@ -2,14 +2,33 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { CompletionItem, CompletionItemKind } from 'vscode';
-
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 
+export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value';
+
+export interface Completion {
+    name: string;
+    kind: CompletionKind;
+    description?: string;
+}
+
+export type Arguments = Record<string, string | null>;
+
+export interface CompletionQuery {
+    subcommand: string;
+    argument?: string;
+    arguments?: Arguments
+}
+
+interface Request {
+    sequence: number;
+    query: CompletionQuery;
+}
+
 interface Response {
     sequence: number;
-    completions: string[];
+    completions: Completion[];
 }
 
 export class AzService {
@@ -23,27 +42,22 @@ export class AzService {
         this.spawn();
     }
 
-    getCompletions(command: string, argument: string, args: { [parameter: string]: string | undefined; }) {
+    getCompletions(query: CompletionQuery) {
         if (!this.process) {
             this.spawn();
         }
-        return new Promise((resolve, reject) => {
+        return new Promise<Completion[]>((resolve, reject) => {
             const sequence = this.nextSequenceNumber++;
             this.listeners[sequence] = response => {
                 try {
-                    resolve(response.completions.map(name => {
-                        const item = new CompletionItem(name, CompletionItemKind.EnumMember);
-                        if (name.indexOf(' ') !== -1) {
-                            item.insertText = `"${name}"`;
-                        }
-                        return item;
-                    }));
+                    resolve(response.completions);
                 } catch (err) {
                     reject(err);
                 }
             };
             if (this.process) {
-                const data = JSON.stringify({ sequence, command, argument, arguments: args });
+                const request: Request = { sequence, query };
+                const data = JSON.stringify(request);
                 this.process.stdin.write(data + '\n', 'utf8');
             } else {
                 resolve([]);

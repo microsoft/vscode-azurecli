@@ -9,12 +9,14 @@ from importlib import import_module
 from sys import stdin, stdout, stderr
 import json
 import pkgutil
+import yaml
 
 from azure.cli.core.application import APPLICATION
 from azure.cli.core.commands import _update_command_definitions
 from azure.cli.core._session import ACCOUNT
 from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
+from azure.cli.core.help_files import helps
 
 
 def load_command_table():
@@ -39,6 +41,36 @@ def install_modules(command_table):
             print("Error loading: {}".format(mod))
     _update_command_definitions(command_table)
 
+def get_group_index(command_table):
+    index = { '': [] }
+    for command in command_table.values():
+        parts = command.name.split()
+        for i in range(1, len(parts)):
+            group = ' '.join(parts[0:i])
+            if group not in index:
+                index[group] = []
+                parent = ' '.join(parts[0:i - 1])
+                completion = {
+                    'name': parts[i - 1],
+                    'kind': 'group'
+                }
+                if group in helps:
+                    description = yaml.load(helps[group]).get('short-summary')
+                    if description:
+                        completion['description'] = description
+                index[parent].append(completion)
+        parent = ' '.join(parts[0:-1])
+        completion = {
+            'name': parts[-1],
+            'kind': 'command'
+        }
+        if command.name in helps:
+            description = yaml.load(helps[command.name]).get('short-summary')
+            if description:
+                completion['description'] = description
+        index[parent].append(completion)
+    return index
+
 def load_profile():
     azure_folder = cli_config_dir()
     if not os.path.exists(azure_folder):
@@ -46,8 +78,38 @@ def load_profile():
 
     ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
 
-def get_completions(command_table, query, verbose=False):
-    command_name = query['command']
+def get_completions(group_index, command_table, query, verbose=False):
+    if 'argument' in query:
+        return get_parameter_value_completions(command_table, query, verbose)
+    command_name = query['subcommand']
+    if command_name in command_table:
+        return get_parameter_name_completions(command_table, query, verbose)
+    if command_name in group_index:
+        return group_index[command_name]
+    if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
+    return []
+
+def get_parameter_name_completions(command_table, query, verbose=False):
+    command_name = query['subcommand']
+    command = command_table[command_name]
+    arguments = query['arguments']
+    unused = [ argument for argument in command.arguments.values()
+        if not [ option for option in argument.options_list if option in arguments ] ]
+    return [ {
+        'name': option,
+        'kind': 'argument_name',
+        'description': argument.type.settings.get('help')
+    } for argument in unused for option in argument.options_list ]
+
+def get_parameter_value_completions(command_table, query, verbose=False):
+    list = get_parameter_value_list(command_table, query, verbose)
+    return [ {
+        'name': item,
+        'kind': 'argument_value'
+    } for item in list ]
+
+def get_parameter_value_list(command_table, query, verbose=False):
+    command_name = query['subcommand']
     if command_name in command_table:
         command = command_table[command_name]
         argument_name = query['argument']
@@ -116,15 +178,24 @@ def find_default(default_name):
 load_profile()
 
 command_table = load_command_table()
+group_index = get_group_index(command_table)
 
 while True:
     line = stdin.readline()
-    query = json.loads(line)
-    completions = get_completions(command_table, query, True)
-    output = json.dumps({ 'sequence': query['sequence'], 'completions': completions })
+    request = json.loads(line)
+    completions = get_completions(group_index, command_table, request['query'], True)
+    response = {
+        'sequence': request['sequence'],
+        'completions': completions
+    }
+    output = json.dumps(response)
     print(output)
     stdout.flush()
 
-# {"sequence":3,"command":"appservice web browse","argument":"--resource-group","arguments": {}}
-# {"sequence":4,"command":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}
-# {"sequence":5,"command":"appservice web browse","argument":"--name","arguments":{}}
+# {"sequence":4,"query":{"subcommand":"appservice"}}
+# {"sequence":4,"query":{"subcommand":"appservice web"}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--resource-group":null}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--resource-group","arguments": {}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
+# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
