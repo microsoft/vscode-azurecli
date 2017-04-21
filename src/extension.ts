@@ -27,6 +27,11 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
         const line = document.lineAt(position);
         const upToCursor = line.text.substr(0, position.character);
+        if (/^\s*(az?)?$/.test(upToCursor)) {
+            const item = new CompletionItem('az', completionKinds['command']);
+            item.documentation = 'Microsoft command-line tools for Azure.';
+            return [item];
+        }
         const rawSubcommand = (/^\s*az\s+(([^-\s][^\s]*\s+)*)/.exec(upToCursor) || [])[1];
         if (typeof rawSubcommand !== 'string') {
             return Promise.resolve([]);
@@ -39,7 +44,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
         return this.azService.getCompletions({ subcommand, argument, arguments: args })
-            .then(completions => completions.map(({ name, kind, description}) => {
+            .then(completions => completions.map(({ name, kind, description }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
                 if (name.indexOf(' ') !== -1) {
                     item.insertText = `"${name}"`;
