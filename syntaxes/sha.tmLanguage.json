@@ -25,7 +25,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "storage.type.sha",
-				"match": "^[^-#]+"
+				"match": "^([^\\s#-]-+|[^#-])+"
 			}]
 		},
 		"identifiers": {
