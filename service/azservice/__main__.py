@@ -36,6 +36,10 @@ global_arguments = {
     'help': {
         'options': ['--help', '-h'],
         'help': 'Get more information about a command'
+    },
+    'query': {
+        'options': ['--query'],
+        'help': 'JMESPath query string. See http://jmespath.org/ for more information and examples.'
     }
 }
 
