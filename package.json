@@ -71,8 +71,5 @@
     "vscode": "^1.0.0"
   },
   "dependencies": {
-    "azure-arm-resource": "^2.0.0-preview",
-    "deep-equal": "^1.0.1",
-    "ms-rest": "^2.0.0"
   }
 }
