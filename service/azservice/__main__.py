@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import os
+import traceback
 from importlib import import_module
 from sys import stdin, stdout, stderr
 import json
@@ -62,7 +63,8 @@ def install_modules(command_table):
         try:
             import_module('azure.cli.command_modules.' + mod).load_params(mod)
         except Exception:  # pylint: disable=broad-except
-            print("Error loading: {}".format(mod))
+            print("Error loading: {}".format(mod), file=stderr)
+            traceback.print_exc(file=stderr)
     _update_command_definitions(command_table)
 
 def get_group_index(command_table):
