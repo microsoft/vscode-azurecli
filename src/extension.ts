@@ -92,7 +92,7 @@ class RunLineInEditor {
         const line = editor.document.lineAt(cursor).text;
         return this.findResultDocument()
             .then(document => window.showTextDocument(document, ViewColumn.Two, true))
-            .then(editor => replaceContent(editor, `{ "Running command": "${line}" }`)
+            .then(editor => replaceContent(editor, JSON.stringify({ 'Running command': line }) + '\n')
                 .then(() => exec(line))
                 .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
                 .then(content => replaceContent(editor, content))
