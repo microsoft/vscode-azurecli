@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 import * as cp from 'child_process';
 
-import { ExtensionContext, TextDocument, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
+import * as jmespath from 'jmespath';
+
+import { ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
 import { AzService, CompletionKind, Arguments } from './azService';
 
@@ -81,21 +83,29 @@ class AzCompletionItemProvider implements CompletionItemProvider {
 class RunLineInEditor {
 
     private resultDocument: TextDocument | undefined;
+    private parsedResult: object | undefined;
+    private query: string | undefined;
     private disposables: Disposable[] = [];
 
     constructor() {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInEditor', editor => this.run(editor)));
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
+        this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
     }
-    private run(editor: TextEditor) {
-        const cursor = editor.selection.active;
-        const line = editor.document.lineAt(cursor).text;
+    private run(source: TextEditor) {
+        this.parsedResult = undefined;
+        this.query = undefined; // TODO
+        const cursor = source.selection.active;
+        const line = source.document.lineAt(cursor).text;
         return this.findResultDocument()
             .then(document => window.showTextDocument(document, ViewColumn.Two, true))
-            .then(editor => replaceContent(editor, JSON.stringify({ 'Running command': line }) + '\n')
+            .then(target => replaceContent(target, JSON.stringify({ 'Running command': line }) + '\n')
                 .then(() => exec(line))
                 .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
-                .then(content => replaceContent(editor, content))
+                .then(content => replaceContent(target, content)
+                    .then(() => this.parsedResult = JSON.parse(content))
+                    .then(undefined, err => {})
+                )
             )
             .then(undefined, console.error);
     }
@@ -112,6 +122,29 @@ class RunLineInEditor {
         if (document === this.resultDocument) {
             this.resultDocument = undefined;
         }
+    }
+
+    private change(e: TextDocumentChangeEvent) {
+        if (this.resultDocument && this.parsedResult && e.document.languageId === 'sha' && e.contentChanges.length === 1) {
+            const resultEditor = window.visibleTextEditors.find(editor => editor.document === this.resultDocument);
+            const change = e.contentChanges[0];
+            const range = change.range;
+            if (resultEditor && range.start.line === range.end.line) {
+                const line = e.document.lineAt(range.start.line).text;
+                const query = this.getQueryParameter(line);
+                if (query !== this.query) {
+                    this.query = query;
+                    const result = jmespath.search(this.parsedResult, query);
+                    replaceContent(resultEditor, JSON.stringify(result, null, '    '))
+                        .then(undefined, console.error);
+                }
+            }
+        }
+    }
+
+    private getQueryParameter(line: string) {
+        return (/\s--query\s+("([^"]*)"|'([^']*)'|([^\s"']+))/.exec(line) as string[] || [])
+            .filter(group => !!group)[2];
     }
 
     dispose() {

@@ -71,5 +71,6 @@
     "vscode": "^1.0.0"
   },
   "dependencies": {
+    "jmespath": "^0.15.0"
   }
 }
