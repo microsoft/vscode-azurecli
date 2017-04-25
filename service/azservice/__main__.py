@@ -12,8 +12,8 @@ import json
 import pkgutil
 import yaml
 
-from azure.cli.core.application import APPLICATION
-from azure.cli.core.commands import _update_command_definitions
+from azure.cli.core.application import APPLICATION, Configuration
+from azure.cli.core.commands import _update_command_definitions, BLACKLISTED_MODS
 from azure.cli.core._session import ACCOUNT
 from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
@@ -45,6 +45,7 @@ global_arguments = {
 }
 
 def load_command_table():
+    APPLICATION.initialize(Configuration())
     command_table = APPLICATION.configuration.get_command_table()
     install_modules(command_table)
     return command_table
@@ -56,12 +57,16 @@ def install_modules(command_table):
     try:
         mods_ns_pkg = import_module('azure.cli.command_modules')
         installed_command_modules = [modname for _, modname, _ in
-                                     pkgutil.iter_modules(mods_ns_pkg.__path__)]
+                                     pkgutil.iter_modules(mods_ns_pkg.__path__)
+                                     if modname not in BLACKLISTED_MODS]
     except ImportError:
         pass
     for mod in installed_command_modules:
         try:
-            import_module('azure.cli.command_modules.' + mod).load_params(mod)
+            mod = import_module('azure.cli.command_modules.' + mod)
+            mod.load_params(mod)
+            mod.load_commands()
+
         except Exception:  # pylint: disable=broad-except
             print("Error loading: {}".format(mod), file=stderr)
             traceback.print_exc(file=stderr)
