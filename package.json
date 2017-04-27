@@ -8,13 +8,20 @@
     "vscode": "^1.11.0"
   },
   "categories": [
-    "Languages"
+    "Languages",
+    "Snippets"
   ],
   "activationEvents": [
     "onLanguage:sha"
   ],
   "main": "./out/src/extension",
   "contributes": {
+    "snippets": [
+      {
+        "language": "sha",
+        "path": "./snippets/snippets.json"
+      }
+    ],
     "languages": [
       {
         "id": "sha",

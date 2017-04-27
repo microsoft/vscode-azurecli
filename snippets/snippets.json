@@ -1,0 +1,27 @@
+{
+	"Azure Login": {
+		"prefix": "az login",
+		"body": "az login",  
+		"description": "Azure Login"
+	},
+	"Create Web Site": {
+		"prefix": "az create website",
+		"body": [
+            "# create an resource group for our app",
+            "az group create --name ${1:group} --location ${2:westus}", 
+            "# create an app service plan (machine)",
+            "az appservice plan create --name ${3:myPlan} --group ${1:group} --location ${2:westus} --sku ${5:FREE}",
+            "# create the website using the plan",
+            "az appservice web create --name ${6:mySite} --plan ${3:myPlan}  --group ${1:group} --location ${2:westus}"
+        ],  
+		"description": "Create an App Service Website"
+	},
+	"Set Up Deployment via Git": {
+		"prefix": "az appservice web source-control",
+		"body": [
+            "# set up deployment",
+            "az appservice web source-control config --name ${1:siteName} --repo-url ${2:urlToRepo} --repository-type ${3:git} --branch ${4:master}"
+        ],  
+		"description": "Create an App Service Website"
+	}
+}
