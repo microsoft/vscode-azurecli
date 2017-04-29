@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es6",
-        "strictNullChecks": true,
+        "strict": true,
         "noUnusedLocals": true,
         "outDir": "out",
         "lib": [

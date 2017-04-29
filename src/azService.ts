@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { spawn, ChildProcess } from 'child_process';
-import { join } from 'path';
+import { join, dirname } from 'path';
+
+import { exec } from './utils';
 
 export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value';
 
@@ -33,42 +35,55 @@ interface Response {
 
 export class AzService {
 
-    private process: ChildProcess | null;
+    private process: Promise<ChildProcess> | undefined;
     private data = '';
     private listeners: { [sequence: number]: ((response: Response) => void); } = {};
     private nextSequenceNumber = 1;
 
     constructor() {
-        this.spawn();
+        this.getProcess();
     }
 
-    getCompletions(query: CompletionQuery) {
-        if (!this.process) {
-            this.spawn();
-        }
-        return new Promise<Completion[]>((resolve, reject) => {
-            const sequence = this.nextSequenceNumber++;
-            this.listeners[sequence] = response => {
-                try {
-                    resolve(response.completions);
-                } catch (err) {
-                    reject(err);
-                }
-            };
-            if (this.process) {
+    async getCompletions(query: CompletionQuery): Promise<Completion[]> {
+        try {
+            const process = await this.getProcess();
+            return new Promise<Completion[]>((resolve, reject) => {
+                const sequence = this.nextSequenceNumber++;
+                this.listeners[sequence] = response => {
+                    try {
+                        resolve(response.completions);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
                 const request: Request = { sequence, query };
                 const data = JSON.stringify(request);
-                this.process.stdin.write(data + '\n', 'utf8');
-            } else {
-                resolve([]);
-            }
+                process.stdin.write(data + '\n', 'utf8');
+            });
+        } catch (err) {
+            console.error(err);
+            return [];
+        }
+    }
+
+    private async getProcess(): Promise<ChildProcess> {
+        if (this.process) {
+            return this.process;
+        }
+        return this.process = exec('az --version').then(({stdout}) => {
+            const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
+            return this.spawn(pythonLocation);
+        }).catch(err => {
+            this.process = undefined;
+            throw err;
         });
     }
 
-    private spawn() {
-        this.process = spawn(join(__dirname, '../../service/az-service'));
-        this.process.stdout.setEncoding('utf8');
-        this.process.stdout.on('data', data => {
+    private spawn(pythonLocation: string) {
+        const args = pythonLocation ? [join(dirname(pythonLocation), 'activate')] : [];
+        const process = spawn(join(__dirname, '../../service/az-service'), args);
+        process.stdout.setEncoding('utf8');
+        process.stdout.on('data', data => {
             this.data += data;
             const nl = this.data.indexOf('\n');
             if (nl !== -1) {
@@ -82,16 +97,17 @@ export class AzService {
                 }
             }
         });
-        this.process.stderr.setEncoding('utf8');
-        this.process.stderr.on('data', data => {
+        process.stderr.setEncoding('utf8');
+        process.stderr.on('data', data => {
             console.error(data);
         });
-        this.process.on('error', err => {
+        process.on('error', err => {
             console.error(err);
         });
-        this.process.on('exit', (code, signal) => {
+        process.on('exit', (code, signal) => {
             console.error(`Exit code ${code}, signal ${signal}`);
-            this.process = null;
+            this.process = undefined;
         });
+        return process;
     }
 }

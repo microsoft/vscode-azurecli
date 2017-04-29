@@ -2,13 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as cp from 'child_process';
-
 import * as jmespath from 'jmespath';
 
 import { ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
 import { AzService, CompletionKind, Arguments } from './azService';
+import { exec } from './utils';
 
 export function activate(context: ExtensionContext) {
     context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(), ' '));
@@ -168,20 +167,6 @@ function replaceContent(editor: TextEditor, content: string) {
     const all = new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end);
     return editor.edit(builder => builder.replace(all, content))
         .then(() => editor.selections = [new Selection(0, 0, 0, 0)]);
-}
-
-interface ExecResult {
-    error: Error;
-    stdout: string;
-    stderr: string;
-}
-
-function exec(command: string) {
-    return new Promise<ExecResult>((resolve, reject) => {
-        cp.exec(command, (error, stdout, stderr) => {
-            (error || stderr ? reject : resolve)({ error, stdout, stderr });
-        });
-    });
 }
 
 export function deactivate() {

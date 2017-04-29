@@ -70,11 +70,12 @@
     "test": "node ./node_modules/vscode/bin/test"
   },
   "devDependencies": {
+    "@types/jmespath": "^0.15.0",
     "@types/mocha": "^2.2.32",
     "@types/node": "^7.0.13",
     "mocha": "^2.3.3",
     "tslint": "^5.1.0",
-    "typescript": "^2.0.3",
+    "typescript": "^2.3.1",
     "vscode": "^1.0.0"
   },
   "dependencies": {
