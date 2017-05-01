@@ -12,34 +12,34 @@
     "Snippets"
   ],
   "activationEvents": [
-    "onLanguage:sha"
+    "onLanguage:azcli"
   ],
   "main": "./out/src/extension",
   "contributes": {
     "snippets": [
       {
-        "language": "sha",
+        "language": "azcli",
         "path": "./snippets/snippets.json"
       }
     ],
     "languages": [
       {
-        "id": "sha",
+        "id": "azcli",
         "aliases": [
           "Bash Azure Scrapbook",
-          "sha"
+          "azcli"
         ],
         "extensions": [
-          ".sha"
+          ".azcli"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "sha",
-        "scopeName": "source.sha",
-        "path": "./syntaxes/sha.tmLanguage.json"
+        "language": "azcli",
+        "scopeName": "source.azcli",
+        "path": "./syntaxes/azcli.tmLanguage.json"
       }
     ],
     "commands": [

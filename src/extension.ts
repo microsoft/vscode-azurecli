@@ -10,7 +10,7 @@ import { AzService, CompletionKind, Arguments } from './azService';
 import { exec } from './utils';
 
 export function activate(context: ExtensionContext) {
-    context.subscriptions.push(languages.registerCompletionItemProvider('sha', new AzCompletionItemProvider(), ' '));
+    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(), ' '));
     context.subscriptions.push(new RunLineInEditor());
 }
 
@@ -124,7 +124,7 @@ class RunLineInEditor {
     }
 
     private change(e: TextDocumentChangeEvent) {
-        if (this.resultDocument && this.parsedResult && e.document.languageId === 'sha' && e.contentChanges.length === 1) {
+        if (this.resultDocument && this.parsedResult && e.document.languageId === 'azcli' && e.contentChanges.length === 1) {
             const resultEditor = window.visibleTextEditors.find(editor => editor.document === this.resultDocument);
             const change = e.contentChanges[0];
             const range = change.range;

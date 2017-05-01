@@ -3,13 +3,13 @@ az login
 az account set --subscription "Try Out Subscription" 
 
 # Create resource group
-az group create --name tryout-test --location westus
-az configure --defaults group=tryout-test
+az group create --name chrmarti-test --location westus
+az configure --defaults group=chrmarti-test
 
 # Create web app
-az appservice plan create --name tryout-plan --is-linux --sku B2
-az appservice web create --name tryout-web --plan tryout-plan 
-az configure --defaults web=tryout-web
+az appservice plan create --name chrmarti-plan --is-linux --sku B2
+az appservice web create --name chrmarti-web --plan chrmarti-plan 
+az configure --defaults web=chrmarti-web
 
 # Set up deployment
 az appservice web deployment user set --user-name --password
@@ -31,4 +31,4 @@ az appservice web log tail
 az appservice web restart
 
 # Clean up
-az group delete --name tryout-test
+az group delete --name chrmarti-test

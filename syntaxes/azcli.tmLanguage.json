@@ -24,50 +24,50 @@
 	"repository": {
 		"keywords": {
 			"patterns": [{
-				"name": "storage.type.sha",
+				"name": "storage.type.azcli",
 				"match": "^([^\\s#-]-+|[^#-])+"
 			}]
 		},
 		"identifiers": {
 			"patterns": [{
-				"name": "variable.other.sha",
+				"name": "variable.other.azcli",
 				"match": "-[^\\s#]*\\s*"
 			}]
 		},
 		"stringsUnquoted": {
 			"patterns": [{
-				"name": "string.unquoted.sha",
+				"name": "string.unquoted.azcli",
 				"match": "[^\\s#]+\\s*"
 			}]
 		},
 		"stringsSingleQuoted": {
-			"name": "string.quoted.single.sha",
+			"name": "string.quoted.single.azcli",
 			"begin": "'",
 			"end": "'",
 			"patterns": [
 				{
-					"name": "constant.character.escape.sha",
+					"name": "constant.character.escape.azcli",
 					"match": "\\\\."
 				}
 			]
 		},
 		"stringsDoubleQuoted": {
-			"name": "string.quoted.double.sha",
+			"name": "string.quoted.double.azcli",
 			"begin": "\"",
 			"end": "\"",
 			"patterns": [
 				{
-					"name": "constant.character.escape.sha",
+					"name": "constant.character.escape.azcli",
 					"match": "\\\\."
 				}
 			]
 		},
 		"comments": {
 			"patterns": [{
-				"name": "comment.line.hash.sha",
+				"name": "comment.line.hash.azcli",
 				"match": "\\#.*"
 			}]
 		}
 	},
-	"scopeName": "source.sha"
+	"scopeName": "source.azcli"
 }
