@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { spawn, ChildProcess } from 'child_process';
-import { join, dirname } from 'path';
+import { join } from 'path';
 
 import { exec } from './utils';
+
+const isWindows = process.platform === 'win32';
 
 export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value';
 
@@ -84,8 +86,7 @@ export class AzService {
     }
 
     private spawn(pythonLocation: string) {
-        const args = pythonLocation ? [join(dirname(pythonLocation), 'activate')] : [];
-        const process = spawn(join(__dirname, '../../service/az-service'), args);
+        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation]);
         process.stdout.setEncoding('utf8');
         process.stdout.on('data', data => {
             this.data += data;

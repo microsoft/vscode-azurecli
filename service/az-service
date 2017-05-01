@@ -4,8 +4,6 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-source ${1:-~/lib/azure-cli/bin/activate} || exit 1
-
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
@@ -16,4 +14,4 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 export PYTHONPATH="${DIR}:${PYTHONPATH}"
 
-python -m azservice "$@"
+"${1:-~/lib/azure-cli/bin/python}" -m azservice "$@"
