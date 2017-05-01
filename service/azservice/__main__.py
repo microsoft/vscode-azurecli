@@ -1,3 +1,4 @@
+"""az service"""
 # --------------------------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
@@ -20,7 +21,7 @@ from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTI
 from azure.cli.core.help_files import helps
 
 
-global_arguments = {
+GLOBAL_ARGUMENTS = {
     'verbose': {
         'options': ['--verbose'],
         'help': 'Increase logging verbosity. Use --debug for full debug logs.'
@@ -114,14 +115,14 @@ def get_completions(group_index, command_table, query, verbose=False):
         return get_parameter_value_completions(command_table, query, verbose)
     command_name = query['subcommand']
     if command_name in command_table:
-        return get_parameter_name_completions(command_table, query, verbose) + \
-            get_global_parameter_name_completions(query, verbose)
+        return get_parameter_name_completions(command_table, query) + \
+            get_global_parameter_name_completions(query)
     if command_name in group_index:
         return group_index[command_name]
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
     return []
 
-def get_parameter_name_completions(command_table, query, verbose=False):
+def get_parameter_name_completions(command_table, query):
     command_name = query['subcommand']
     command = command_table[command_name]
     arguments = query['arguments']
@@ -164,7 +165,7 @@ def get_parameter_value_list(command_table, query, verbose=False):
                         except TypeError:
                             if verbose: print('Completer not run ({} {})'.format(command_name, argument_name), file=stderr)
             elif verbose: print('Completions not found ({} {})'.format(command_name, argument_name), file=stderr)
-        elif verbose and not [ a for a in global_arguments.values() if argument_name in a['options'] ]: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
+        elif verbose and not [ a for a in GLOBAL_ARGUMENTS.values() if argument_name in a['options'] ]: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
     elif verbose: print('Command not found ({})'.format(command_name), file=stderr)
     return []
 
@@ -208,9 +209,9 @@ def find_default(default_name):
     except configparser.NoSectionError:
         return None
 
-def get_global_parameter_name_completions(query, verbose=False):
+def get_global_parameter_name_completions(query):
     arguments = query['arguments']
-    unused = [ argument for argument in global_arguments.values()
+    unused = [ argument for argument in GLOBAL_ARGUMENTS.values()
         if not [ option for option in argument['options'] if option in arguments ] ]
     return [ {
         'name': option,
@@ -220,29 +221,32 @@ def get_global_parameter_name_completions(query, verbose=False):
 
 def get_global_parameter_value_list(query, verbose=False):
     argument_name = query['argument']
-    argument = next((argument for argument in global_arguments.values() if argument_name in argument['options']), None)
+    argument = next((argument for argument in GLOBAL_ARGUMENTS.values() if argument_name in argument['options']), None)
     if argument:
         if 'choices' in argument:
             return argument['choices']
         elif verbose: print('Completions not found ({})'.format(argument_name), file=stderr)
     return []
 
-load_profile()
+def main():
+    load_profile()
 
-command_table = load_command_table()
-group_index = get_group_index(command_table)
+    command_table = load_command_table()
+    group_index = get_group_index(command_table)
 
-while True:
-    line = stdin.readline()
-    request = json.loads(line)
-    completions = get_completions(group_index, command_table, request['query'], True)
-    response = {
-        'sequence': request['sequence'],
-        'completions': completions
-    }
-    output = json.dumps(response)
-    print(output)
-    stdout.flush()
+    while True:
+        line = stdin.readline()
+        request = json.loads(line)
+        completions = get_completions(group_index, command_table, request['query'], True)
+        response = {
+            'sequence': request['sequence'],
+            'completions': completions
+        }
+        output = json.dumps(response)
+        print(output)
+        stdout.flush()
+
+main()
 
 # {"sequence":4,"query":{"subcommand":"appservice"}}
 # {"sequence":4,"query":{"subcommand":"appservice web"}}
