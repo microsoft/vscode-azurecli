@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
+import * as opn from 'opn';
 
 import { ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
@@ -23,7 +24,7 @@ const completionKinds: Record<CompletionKind, CompletionItemKind> = {
 
 class AzCompletionItemProvider implements CompletionItemProvider {
 
-    private azService = new AzService();
+    private azService = new AzService(azNotFound);
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
         const line = document.lineAt(position);
@@ -167,6 +168,24 @@ function replaceContent(editor: TextEditor, content: string) {
     const all = new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end);
     return editor.edit(builder => builder.replace(all, content))
         .then(() => editor.selections = [new Selection(0, 0, 0, 0)]);
+}
+
+async function azNotFound(): Promise<void> {
+    const result = await window.showInformationMessage<any>('\'az\' not found on PATH, make sure it is installed.',
+        {
+            title: 'Download',
+            run: () => {
+                opn('https://docs.microsoft.com/en-us/cli/azure/');
+            }
+        },
+        {
+            title: 'Close',
+            isCloseAffordance: true
+        }
+    );
+    if (result && result.run) {
+        result.run();
+    }
 }
 
 export function deactivate() {

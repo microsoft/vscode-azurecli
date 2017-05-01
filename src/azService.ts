@@ -40,8 +40,12 @@ export class AzService {
     private listeners: { [sequence: number]: ((response: Response) => void); } = {};
     private nextSequenceNumber = 1;
 
-    constructor() {
-        this.getProcess();
+    constructor(azNotFound: () => void) {
+        this.getProcess()
+            .catch(err => {
+                console.log(err);
+                azNotFound();
+            });
     }
 
     async getCompletions(query: CompletionQuery): Promise<Completion[]> {
