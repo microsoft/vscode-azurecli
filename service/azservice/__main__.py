@@ -13,6 +13,8 @@ import json
 import pkgutil
 import yaml
 
+from six.moves import configparser
+
 from azure.cli.core.application import APPLICATION, Configuration
 from azure.cli.core.commands import _update_command_definitions, BLACKLISTED_MODS
 from azure.cli.core._session import ACCOUNT
@@ -128,9 +130,12 @@ def get_parameter_name_completions(command_table, query):
     arguments = query['arguments']
     unused = [ argument for argument in command.arguments.values()
         if not [ option for option in argument.options_list if option in arguments ] ]
+    reload_config()
     return [ {
         'name': option,
         'kind': 'argument_name',
+        'required': hasattr(argument.type, 'required') and argument.type.required == True,
+        'default': hasattr(argument.type, 'default_name') and argument.type.default_name and find_default(argument.type.default_name) != None,
         'description': argument.type.settings.get('help')
     } for argument in unused for option in argument.options_list ]
 
@@ -183,18 +188,14 @@ def get_argument(command, argument_name):
     return None, None
 
 def add_defaults(command, arguments):
-    # TODO Needs change in CLI module that removes 'configured_default' from argument.type.settings (here copied to argument.type).
-    # azure/cli/core/commands/__init__.py:
-    #     if 'configured_default' in overrides.settings:
-    #         def_config = overrides.settings.pop('configured_default', None)
-    #         setattr(arg.type, 'configured_default', def_config) <<< Added line
+    # TODO Needs PR: https://github.com/Azure/azure-cli/pull/3132
     reloaded = False
     for name, argument in command.arguments.items():
-        if not hasattr(arguments, name) and hasattr(argument.type, 'configured_default'):
+        if not hasattr(arguments, name) and hasattr(argument.type, 'default_name') and argument.type.default_name:
             if not reloaded:
                 reload_config()
                 reloaded = True
-            default = find_default(argument.type.configured_default)
+            default = find_default(argument.type.default_name)
             if default:
                 setattr(arguments, name, default)
 
@@ -250,6 +251,7 @@ main()
 
 # {"sequence":4,"query":{"subcommand":"appservice"}}
 # {"sequence":4,"query":{"subcommand":"appservice web"}}
+# {"sequence":4,"query":{"subcommand":"appservice web create","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--resource-group":null}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--output":"table"}}}
