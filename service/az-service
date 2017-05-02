@@ -14,4 +14,4 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 export PYTHONPATH="${DIR}:${PYTHONPATH}"
 
-"${1:-~/lib/azure-cli/bin/python}" -m azservice "$@"
+"${1:-$HOME/lib/azure-cli/bin/python}" -m azservice "$@"
