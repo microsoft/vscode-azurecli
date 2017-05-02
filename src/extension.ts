@@ -173,9 +173,9 @@ function replaceContent(editor: TextEditor, content: string) {
 async function azNotFound(): Promise<void> {
     const result = await window.showInformationMessage<any>('\'az\' not found on PATH, make sure it is installed.',
         {
-            title: 'Download',
+            title: 'Install...',
             run: () => {
-                opn('https://docs.microsoft.com/en-us/cli/azure/');
+                opn('https://aka.ms/GetTheAzureCLI');
             }
         },
         {
