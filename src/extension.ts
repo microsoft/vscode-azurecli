@@ -5,7 +5,7 @@
 import * as jmespath from 'jmespath';
 import * as opn from 'opn';
 
-import { ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
+import { StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
 import { AzService, CompletionKind, Arguments } from './azService';
 import { exec } from './utils';
@@ -84,14 +84,21 @@ class RunLineInEditor {
 
     private resultDocument: TextDocument | undefined;
     private parsedResult: object | undefined;
+    private queryEnabled = false;
+    private queryEnabledStatus: StatusBarItem;
     private query: string | undefined;
     private disposables: Disposable[] = [];
 
     constructor() {
+        this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
+        this.disposables.push(this.queryEnabledStatus = window.createStatusBarItem(StatusBarAlignment.Right));
+        this.queryEnabledStatus.text = 'Az Live Query';
+        this.queryEnabledStatus.command = 'ms-azurecli.toggleLiveQuery';
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInEditor', editor => this.run(editor)));
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
     }
+
     private run(source: TextEditor) {
         this.parsedResult = undefined;
         this.query = undefined; // TODO
@@ -110,6 +117,12 @@ class RunLineInEditor {
             .then(undefined, console.error);
     }
 
+    private toggleQuery(source: TextEditor) {
+        this.queryEnabled = !this.queryEnabled;
+        this.queryEnabledStatus[this.queryEnabled ? 'show' : 'hide']();
+        this.updateResult();
+    }
+
     private findResultDocument() {
         if (this.resultDocument) {
             return Promise.resolve(this.resultDocument);
@@ -125,18 +138,34 @@ class RunLineInEditor {
     }
 
     private change(e: TextDocumentChangeEvent) {
-        if (this.resultDocument && this.parsedResult && e.document.languageId === 'azcli' && e.contentChanges.length === 1) {
-            const resultEditor = window.visibleTextEditors.find(editor => editor.document === this.resultDocument);
+        if (e.document.languageId === 'azcli' && e.contentChanges.length === 1) {
             const change = e.contentChanges[0];
             const range = change.range;
-            if (resultEditor && range.start.line === range.end.line) {
+            if (range.start.line === range.end.line) {
                 const line = e.document.lineAt(range.start.line).text;
                 const query = this.getQueryParameter(line);
                 if (query !== this.query) {
                     this.query = query;
-                    const result = jmespath.search(this.parsedResult, query);
+                    if (this.queryEnabled) {
+                        this.updateResult();
+                    }
+                }
+            }
+        }
+    }
+
+    private updateResult() {
+        if (this.resultDocument && this.parsedResult) {
+            const resultEditor = window.visibleTextEditors.find(editor => editor.document === this.resultDocument);
+            if (resultEditor) {
+                try {
+                    const result = this.queryEnabled && this.query ? jmespath.search(this.parsedResult, this.query) : this.parsedResult;
                     replaceContent(resultEditor, JSON.stringify(result, null, '    '))
                         .then(undefined, console.error);
+                } catch (err) {
+                    if (!(err && err.name === 'ParserError')) {
+                        // console.error(err); Ignore because jmespath sometimes fails on partial queries.
+                    }
                 }
             }
         }
