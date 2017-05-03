@@ -134,8 +134,8 @@ def get_parameter_name_completions(command_table, query):
     return [ {
         'name': option,
         'kind': 'argument_name',
-        'required': hasattr(argument.type, 'required') and argument.type.required == True,
-        'default': hasattr(argument.type, 'default_name') and argument.type.default_name and find_default(argument.type.default_name) != None,
+        'required': hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True,
+        'default': hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and find_default(argument.type.default_name_tooling) != None,
         'description': argument.type.settings.get('help')
     } for argument in unused for option in argument.options_list ]
 
@@ -191,11 +191,11 @@ def add_defaults(command, arguments):
     # TODO Needs PR: https://github.com/Azure/azure-cli/pull/3132
     reloaded = False
     for name, argument in command.arguments.items():
-        if not hasattr(arguments, name) and hasattr(argument.type, 'default_name') and argument.type.default_name:
+        if not hasattr(arguments, name) and hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling:
             if not reloaded:
                 reload_config()
                 reloaded = True
-            default = find_default(argument.type.default_name)
+            default = find_default(argument.type.default_name_tooling)
             if default:
                 setattr(arguments, name, default)
 
