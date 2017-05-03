@@ -1,27 +1,60 @@
 {
 	"Azure Login": {
-		"prefix": "az login",
-		"body": "az login",  
+		"prefix": "login",
+		"body": [
+			"az login${1}",
+			"az account set --subscription${2}"
+		],
 		"description": "Azure Login"
 	},
-	"Create Web Site": {
-		"prefix": "az create website",
+	"Create Resource Group": {
+		"prefix": "createresourcegroup",
 		"body": [
-            "# create an resource group for our app",
-            "az group create --name ${1:group} --location ${2:westus}", 
-            "# create an app service plan (machine)",
-            "az appservice plan create --name ${3:myPlan} --group ${1:group} --location ${2:westus} --sku ${5:FREE}",
-            "# create the website using the plan",
-            "az appservice web create --name ${6:mySite} --plan ${3:myPlan}  --group ${1:group} --location ${2:westus}"
-        ],  
-		"description": "Create an App Service Website"
+			"az group create --name ${1:MyGroup} --location ${2:westus}",
+			"az configure --defaults group=${1:MyGroup}${3}"
+		],
+		"description": "Create Resource Group"
 	},
-	"Set Up Deployment via Git": {
-		"prefix": "az appservice web source-control",
+	"Create Service Plan": {
+		"prefix": "createserviceplan",
+		"body": "az appservice plan create --name ${1:MyPlan} --resource-group${2} --sku ${3:FREE}",
+		"description": "Create Service Plan"
+	},
+	"Create Website": {
+		"prefix": "createwebsite",
 		"body": [
-            "# set up deployment",
-            "az appservice web source-control config --name ${1:siteName} --repo-url ${2:urlToRepo} --repository-type ${3:git} --branch ${4:master}"
-        ],  
-		"description": "Create an App Service Website"
+			"az appservice web create --name ${1:MyWebsite} --resource-group${2} --plan${3}",
+			"az configure --defaults web=${1:MyWebsite}${4}"
+		],
+		"description": "Create Website"
+	},
+	"Deploy From Git Repository": {
+		"prefix": "deployfromgit",
+		"body": "az appservice web source-control config --resource-group${1} --name${2} --repo-url ${3:https://github.com/} --branch ${4:master} --manual-integration",
+		"description": "Deploy From Git Repository"
+	},
+	"Browse Website": {
+		"prefix": "browsewebsite",
+		"body": "az appservice web browse --resource-group${1} --name${2}",
+		"description": "Browse Website"
+	},
+	"Create Hello World Website": {
+		"prefix": "helloworldwebsite",
+		"body": [
+			"# Login and choose subscription",
+			"az login${1}",
+			"az account set --subscription${2}",
+			"# Create resource group and service plan",
+			"az group create --name ${3:MyGroup} --location ${4:westus}",
+			"az configure --defaults group=${3:MyGroup}${5}",
+			"az appservice plan create --name ${6:MyPlan} --sku ${7:FREE}",
+			"# Create and deploy website",
+			"az appservice web create --name ${8:MyWebsite} --plan ${6:MyPlan}",
+			"az configure --defaults web=${8:MyWebsite}${9}",
+			"az appservice web source-control config --repo-url ${10:https://github.com/Azure-Samples/app-service-web-html-get-started.git} --branch ${11:master} --manual-integration",
+			"# Browse",
+			"az appservice web browse"
+		],
+		"description": "Create Hello World Website"
 	}
 }
