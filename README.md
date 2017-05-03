@@ -1,6 +1,6 @@
 # Azure CLI Tools
 
-Contributes a scrapbook experience for developing and running commands of the [Azure CLI](https://github.com/Azure/azure-cli).
+Contributes a scrapbook experience for developing and running commands of the [Azure CLI](https://aka.ms/AzureCLI2).
 
 Create `.azcli` files and use these features:
 - IntelliSense for commands, argument names and their values.
