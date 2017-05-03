@@ -3,44 +3,44 @@
 	"name": "Azure CLI Scrapbook",
 	"patterns": [
 		{
-			"include": "#keywords"
+			"include": "#subcommand"
 		},
 		{
-			"include": "#identifiers"
+			"include": "#parameterName"
 		},
 		{
 			"include": "#comments"
 		},
 		{
-			"include": "#stringsUnquoted"
+			"include": "#parameterValueUnquoted"
 		},
 		{
-			"include": "#stringsSingleQuoted"
+			"include": "#parameterValueSingleQuoted"
 		},
 		{
-			"include": "#stringsDoubleQuoted"
+			"include": "#parameterValueDoubleQuoted"
 		}
 	],
 	"repository": {
-		"keywords": {
+		"subcommand": {
 			"patterns": [{
 				"name": "storage.type.azcli",
 				"match": "^([^\\s#-]-+|[^#-])+"
 			}]
 		},
-		"identifiers": {
+		"parameterName": {
 			"patterns": [{
 				"name": "variable.other.azcli",
 				"match": "-[^\\s#]*\\s*"
 			}]
 		},
-		"stringsUnquoted": {
+		"parameterValueUnquoted": {
 			"patterns": [{
 				"name": "string.unquoted.azcli",
 				"match": "[^\\s#]+\\s*"
 			}]
 		},
-		"stringsSingleQuoted": {
+		"parameterValueSingleQuoted": {
 			"name": "string.quoted.single.azcli",
 			"begin": "'",
 			"end": "'",
@@ -51,7 +51,7 @@
 				}
 			]
 		},
-		"stringsDoubleQuoted": {
+		"parameterValueDoubleQuoted": {
 			"name": "string.quoted.double.azcli",
 			"begin": "\"",
 			"end": "\"",
