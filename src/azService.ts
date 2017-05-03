@@ -9,7 +9,7 @@ import { exec } from './utils';
 
 const isWindows = process.platform === 'win32';
 
-export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value';
+export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value' | 'snippet';
 
 export interface Completion {
     name: string;
@@ -21,7 +21,7 @@ export interface Completion {
 export type Arguments = Record<string, string | null>;
 
 export interface CompletionQuery {
-    subcommand: string;
+    subcommand?: string;
     argument?: string;
     arguments?: Arguments
 }

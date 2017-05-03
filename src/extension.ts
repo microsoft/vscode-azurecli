@@ -19,7 +19,8 @@ const completionKinds: Record<CompletionKind, CompletionItemKind> = {
     group: CompletionItemKind.Module,
     command: CompletionItemKind.Function,
     parameter_name: CompletionItemKind.Variable,
-    parameter_value: CompletionItemKind.EnumMember
+    parameter_value: CompletionItemKind.EnumMember,
+    snippet: CompletionItemKind.Snippet
 };
 
 class AzCompletionItemProvider implements CompletionItemProvider {
@@ -29,23 +30,17 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
         const line = document.lineAt(position);
         const upToCursor = line.text.substr(0, position.character);
-        if (/^\s*(az?)?$/.test(upToCursor)) {
-            const item = new CompletionItem('az', completionKinds['command']);
-            item.documentation = 'Microsoft command-line tools for Azure.';
-            return [item];
-        }
-        const rawSubcommand = (/^\s*az\s+(([^-\s][^\s]*\s+)*)/.exec(upToCursor) || [])[1];
+        const rawSubcommand = (/^\s*(([^-\s][^\s]*\s+)*)/.exec(upToCursor) || [])[1];
         if (typeof rawSubcommand !== 'string') {
             return Promise.resolve([]);
         }
         const subcommand = rawSubcommand.trim()
-            .split(/\s+/)
-            .join(' ');
+            .split(/\s+/);
         const args = this.getArguments(line.text);
         const argument = (/\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor) || [])[1];
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
-        return this.azService.getCompletions({ subcommand, argument, arguments: args })
+        return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {})
             .then(completions => completions.map(({ name, kind, description, snippet }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
                 if (snippet) {

@@ -22,6 +22,11 @@ from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 from azure.cli.core.help_files import helps
 
+AZ_COMPLETION = {
+    'name': 'az',
+    'kind': 'command',
+    'description': 'Microsoft command-line tools for Azure.'
+}
 
 GLOBAL_ARGUMENTS = {
     'verbose': {
@@ -105,6 +110,23 @@ def get_group_index(command_table):
         index[parent].append(completion)
     return index
 
+def get_snippets(command_table):
+    snippets = []
+    for command in command_table.values():
+        completion = {
+            'name': ' '.join(reversed(command.name.split())),
+            'kind': 'snippet'
+        }
+        if command.name in helps:
+            description = yaml.load(helps[command.name]).get('short-summary')
+            if description:
+                completion['description'] = description
+        snippets.append({
+            'subcommand': command.name,
+            'completion': completion
+        })
+    return snippets
+
 def load_profile():
     azure_folder = cli_config_dir()
     if not os.path.exists(azure_folder):
@@ -112,28 +134,39 @@ def load_profile():
 
     ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
 
-def get_completions(group_index, command_table, query, verbose=False):
+def get_completions(group_index, command_table, snippets, query, verbose=False):
     if 'argument' in query:
         return get_parameter_value_completions(command_table, query, verbose)
+    if 'subcommand' not in query:
+        return get_snippet_completions(command_table, snippets) + [AZ_COMPLETION]
     command_name = query['subcommand']
     if command_name in command_table:
         return get_parameter_name_completions(command_table, query) + \
             get_global_parameter_name_completions(query)
     if command_name in group_index:
-        return [
-            (with_snippet(command_table, command_name, completion) if completion['kind'] == 'command' else completion)
-            for completion in group_index[command_name]
-        ]
+        return get_command_completions(group_index, command_table, command_name)
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
     return []
 
-def with_snippet(command_table, command_name, completion):
-    subcommand = command_name + ' ' + completion['name'] if command_name else completion['name']
+def get_snippet_completions(command_table, snippets):
+    return [
+        with_snippet(command_table, snippet['subcommand'], 'az ' + snippet['subcommand'], snippet['completion'])
+        for snippet in snippets
+    ]
+
+def get_command_completions(group_index, command_table, command_name):
+    return [
+        (with_snippet(command_table, (command_name + ' ' + completion['name']).strip(), completion['name'], completion)
+            if completion['kind'] == 'command' else completion)
+        for completion in group_index[command_name]
+    ]
+
+def with_snippet(command_table, subcommand, snippet_prefix, completion):
     parameters = get_parameter_name_completions(command_table, { 'subcommand': subcommand, 'arguments': [] })
-    snippet = completion['name']
+    snippet = snippet_prefix
     tabstop = 1
     for parameter in parameters:
-        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--'):
+        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--') and parameter['name'] != '--is-linux':
             snippet += ' ' + parameter['name'] + '$' + str(tabstop)
             tabstop += 1
     if snippet != completion['name']:
@@ -251,11 +284,12 @@ def main():
 
     command_table = load_command_table()
     group_index = get_group_index(command_table)
+    snippets = [] # get_snippets(command_table)
 
     while True:
         line = stdin.readline()
         request = json.loads(line)
-        completions = get_completions(group_index, command_table, request['query'], True)
+        completions = get_completions(group_index, command_table, snippets, request['query'], True)
         response = {
             'sequence': request['sequence'],
             'completions': completions
@@ -266,7 +300,11 @@ def main():
 
 main()
 
+# {"sequence":4,"query":{}}
+# {"sequence":4,"query":{"subcommand":""}}
 # {"sequence":4,"query":{"subcommand":"appservice"}}
+# {"sequence":4,"query":{"subcommand":"appservice plan"}}
+# {"sequence":4,"query":{"subcommand":"appservice plan create","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web"}}
 # {"sequence":4,"query":{"subcommand":"appservice web create","arguments": {}}}
 # {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {}}}
