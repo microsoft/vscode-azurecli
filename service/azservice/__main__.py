@@ -120,9 +120,26 @@ def get_completions(group_index, command_table, query, verbose=False):
         return get_parameter_name_completions(command_table, query) + \
             get_global_parameter_name_completions(query)
     if command_name in group_index:
-        return group_index[command_name]
+        return [
+            (with_snippet(command_table, command_name, completion) if completion['kind'] == 'command' else completion)
+            for completion in group_index[command_name]
+        ]
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
     return []
+
+def with_snippet(command_table, command_name, completion):
+    subcommand = command_name + ' ' + completion['name'] if command_name else completion['name']
+    parameters = get_parameter_name_completions(command_table, { 'subcommand': subcommand, 'arguments': [] })
+    snippet = completion['name']
+    tabstop = 1
+    for parameter in parameters:
+        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--'):
+            snippet += ' ' + parameter['name'] + '$' + str(tabstop)
+            tabstop += 1
+    if snippet != completion['name']:
+        completion = completion.copy()
+        completion['snippet'] = snippet
+    return completion
 
 def get_parameter_name_completions(command_table, query):
     command_name = query['subcommand']

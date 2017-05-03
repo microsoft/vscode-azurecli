@@ -15,6 +15,7 @@ export interface Completion {
     name: string;
     kind: CompletionKind;
     description?: string;
+    snippet?: string;
 }
 
 export type Arguments = Record<string, string | null>;

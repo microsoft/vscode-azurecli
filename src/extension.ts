@@ -5,7 +5,7 @@
 import * as jmespath from 'jmespath';
 import * as opn from 'opn';
 
-import { StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
+import { SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
 import { AzService, CompletionKind, Arguments } from './azService';
 import { exec } from './utils';
@@ -46,9 +46,11 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
         return this.azService.getCompletions({ subcommand, argument, arguments: args })
-            .then(completions => completions.map(({ name, kind, description }) => {
+            .then(completions => completions.map(({ name, kind, description, snippet }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
-                if (name.indexOf(' ') !== -1) {
+                if (snippet) {
+                    item.insertText = new SnippetString(snippet);
+                } else if (name.indexOf(' ') !== -1) {
                     item.insertText = `"${name}"`;
                 } else if (lead) {
                     item.insertText = name.substr(lead.length);
