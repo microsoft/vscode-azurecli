@@ -1,43 +1,43 @@
 {
-	"Azure Login": {
-		"prefix": "login",
-		"body": [
-			"az login${1}",
-			"az account set --subscription${2}"
-		],
-		"description": "Azure Login"
-	},
-	"Create Resource Group": {
-		"prefix": "createresourcegroup",
-		"body": [
-			"az group create --name ${1:MyGroup} --location ${2:westus}",
-			"az configure --defaults group=${1:MyGroup}${3}"
-		],
-		"description": "Create Resource Group"
-	},
-	"Create Service Plan": {
-		"prefix": "createserviceplan",
-		"body": "az appservice plan create --name ${1:MyPlan} --resource-group${2} --sku ${3:FREE}",
-		"description": "Create Service Plan"
-	},
-	"Create Website": {
-		"prefix": "createwebsite",
-		"body": [
-			"az appservice web create --name ${1:MyWebsite} --resource-group${2} --plan${3}",
-			"az configure --defaults web=${1:MyWebsite}${4}"
-		],
-		"description": "Create Website"
-	},
-	"Deploy From Git Repository": {
-		"prefix": "deployfromgit",
-		"body": "az appservice web source-control config --resource-group${1} --name${2} --repo-url ${3:https://github.com/} --branch ${4:master} --manual-integration",
-		"description": "Deploy From Git Repository"
-	},
-	"Browse Website": {
-		"prefix": "browsewebsite",
-		"body": "az appservice web browse --resource-group${1} --name${2}",
-		"description": "Browse Website"
-	},
+	// "Azure Login": {
+	// 	"prefix": "login",
+	// 	"body": [
+	// 		"az login${1}",
+	// 		"az account set --subscription${2}"
+	// 	],
+	// 	"description": "Azure Login"
+	// },
+	// "Create Resource Group": {
+	// 	"prefix": "createresourcegroup",
+	// 	"body": [
+	// 		"az group create --name ${1:MyGroup} --location ${2:westus}",
+	// 		"az configure --defaults group=${1:MyGroup}${3}"
+	// 	],
+	// 	"description": "Create Resource Group"
+	// },
+	// "Create Service Plan": {
+	// 	"prefix": "createserviceplan",
+	// 	"body": "az appservice plan create --name ${1:MyPlan} --resource-group${2} --sku ${3:FREE}",
+	// 	"description": "Create Service Plan"
+	// },
+	// "Create Website": {
+	// 	"prefix": "createwebsite",
+	// 	"body": [
+	// 		"az appservice web create --name ${1:MyWebsite} --resource-group${2} --plan${3}",
+	// 		"az configure --defaults web=${1:MyWebsite}${4}"
+	// 	],
+	// 	"description": "Create Website"
+	// },
+	// "Deploy From Git Repository": {
+	// 	"prefix": "deployfromgit",
+	// 	"body": "az appservice web source-control config --resource-group${1} --name${2} --repo-url ${3:https://github.com/} --branch ${4:master} --manual-integration",
+	// 	"description": "Deploy From Git Repository"
+	// },
+	// "Browse Website": {
+	// 	"prefix": "browsewebsite",
+	// 	"body": "az appservice web browse --resource-group${1} --name${2}",
+	// 	"description": "Browse Website"
+	// },
 	"Create Hello World Website": {
 		"prefix": "helloworldwebsite",
 		"body": [

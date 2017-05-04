@@ -284,7 +284,7 @@ def main():
 
     command_table = load_command_table()
     group_index = get_group_index(command_table)
-    snippets = [] # get_snippets(command_table)
+    snippets = get_snippets(command_table)
 
     while True:
         line = stdin.readline()
