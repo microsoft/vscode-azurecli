@@ -22,7 +22,8 @@ from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 from azure.cli.core.help_files import helps
 
-TWO_SEGMENTS_COMPLETION_ENABLED = False
+TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'appservice web', 'appservice plan', etc. as proposals.
+NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 
 AZ_COMPLETION = {
     'name': 'az',
@@ -83,7 +84,7 @@ def install_modules(command_table):
     _update_command_definitions(command_table)
 
 def get_group_index(command_table):
-    index = { '': [] }
+    index = { '': [], '-': [] }
     for command in command_table.values():
         parts = command.name.split()
         len_parts = len(parts)
@@ -103,10 +104,20 @@ def get_group_index(command_table):
                         completion['documentation'] = description
 
                 index[parent].append(completion)
+                if NO_AZ_PREFIX_COMPLETION_ENABLED and i == 1:
+                    add = completion.copy()
+                    add['snippet'] = 'az ' + add['name']
+                    index['-'].append(add)
+                
                 if TWO_SEGMENTS_COMPLETION_ENABLED and i > 1:
-                    second = completion.copy()
-                    second['name'] = ' '.join(parts[i - 2:i])
-                    index[' '.join(parts[0:i - 2])].append(second)
+                    add = completion.copy()
+                    add['name'] = ' '.join(parts[i - 2:i])
+                    add['snippet'] = add['name'] # Avoid quoting TS-side
+                    index[' '.join(parts[0:i - 2])].append(add)
+                    if NO_AZ_PREFIX_COMPLETION_ENABLED and i == 2:
+                        add = add.copy()
+                        add['snippet'] = 'az ' + add['name']
+                        index['-'].append(add)
 
         parent = ' '.join(parts[0:-1])
         completion = {
@@ -117,10 +128,16 @@ def get_group_index(command_table):
         add_command_documentation(completion, command)
 
         index[parent].append(completion)
+
         if TWO_SEGMENTS_COMPLETION_ENABLED and len_parts > 1:
-            second = completion.copy()
-            second['name'] = ' '.join(parts[len_parts - 2:len_parts])
-            index[' '.join(parts[0:len_parts - 2])].append(second)
+            add = completion.copy()
+            add['name'] = ' '.join(parts[len_parts - 2:len_parts])
+            add['snippet'] = add['name'] # Avoid quoting TS-side
+            index[' '.join(parts[0:len_parts - 2])].append(add)
+            if NO_AZ_PREFIX_COMPLETION_ENABLED and len_parts == 2:
+                add = add.copy()
+                add['snippet'] = 'az ' + add['name']
+                index['-'].append(add)
     return index
 
 def get_snippets(command_table):
@@ -163,7 +180,7 @@ def get_completions(group_index, command_table, snippets, query, verbose=False):
     if 'argument' in query:
         return get_parameter_value_completions(command_table, query, verbose)
     if 'subcommand' not in query:
-        return get_snippet_completions(command_table, snippets) + [AZ_COMPLETION]
+        return get_snippet_completions(command_table, snippets) + get_prefix_command_completions(group_index, command_table) + [AZ_COMPLETION]
     command_name = query['subcommand']
     if command_name in command_table:
         return get_parameter_name_completions(command_table, query) + \
@@ -184,6 +201,13 @@ def get_command_completions(group_index, command_table, command_name):
         (with_snippet(command_table, (command_name + ' ' + completion['name']).strip(), completion['name'], completion)
             if completion['kind'] == 'command' else completion)
         for completion in group_index[command_name]
+    ]
+
+def get_prefix_command_completions(group_index, command_table):
+    return [
+        (with_snippet(command_table, completion['name'], completion['snippet'], completion)
+            if completion['kind'] == 'command' else completion)
+        for completion in group_index['-']
     ]
 
 def with_snippet(command_table, subcommand, snippet_prefix, completion):
