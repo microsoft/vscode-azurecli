@@ -45,8 +45,6 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                 const item = new CompletionItem(name, completionKinds[kind]);
                 if (snippet) {
                     item.insertText = new SnippetString(snippet);
-                } else if (name.indexOf(' ') !== -1) {
-                    item.insertText = `"${name}"`;
                 } else if (lead) {
                     item.insertText = name.substr(lead.length);
                 }

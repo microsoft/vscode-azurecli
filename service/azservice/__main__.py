@@ -112,7 +112,6 @@ def get_group_index(command_table):
                 if TWO_SEGMENTS_COMPLETION_ENABLED and i > 1:
                     add = completion.copy()
                     add['name'] = ' '.join(parts[i - 2:i])
-                    add['snippet'] = add['name'] # Avoid quoting TS-side
                     index[' '.join(parts[0:i - 2])].append(add)
                     if NO_AZ_PREFIX_COMPLETION_ENABLED and i == 2:
                         add = add.copy()
@@ -132,7 +131,6 @@ def get_group_index(command_table):
         if TWO_SEGMENTS_COMPLETION_ENABLED and len_parts > 1:
             add = completion.copy()
             add['name'] = ' '.join(parts[len_parts - 2:len_parts])
-            add['snippet'] = add['name'] # Avoid quoting TS-side
             index[' '.join(parts[0:len_parts - 2])].append(add)
             if NO_AZ_PREFIX_COMPLETION_ENABLED and len_parts == 2:
                 add = add.copy()
@@ -243,7 +241,8 @@ def get_parameter_value_completions(command_table, query, verbose=False):
         get_global_parameter_value_list(query, verbose)
     return [ {
         'name': item,
-        'kind': 'argument_value'
+        'kind': 'argument_value',
+        'snippet': '"' + item + '"' if ' ' in item else item
     } for item in list ]
 
 def get_parameter_value_list(command_table, query, verbose=False):
