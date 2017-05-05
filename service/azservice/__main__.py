@@ -22,6 +22,8 @@ from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 from azure.cli.core.help_files import helps
 
+TWO_SEGMENTS_COMPLETION_ENABLED = False
+
 AZ_COMPLETION = {
     'name': 'az',
     'kind': 'command',
@@ -84,7 +86,8 @@ def get_group_index(command_table):
     index = { '': [] }
     for command in command_table.values():
         parts = command.name.split()
-        for i in range(1, len(parts)):
+        len_parts = len(parts)
+        for i in range(1, len_parts):
             group = ' '.join(parts[0:i])
             if group not in index:
                 index[group] = []
@@ -98,7 +101,13 @@ def get_group_index(command_table):
                     description = yaml.load(helps[group]).get('short-summary')
                     if description:
                         completion['documentation'] = description
+
                 index[parent].append(completion)
+                if TWO_SEGMENTS_COMPLETION_ENABLED and i > 1:
+                    second = completion.copy()
+                    second['name'] = ' '.join(parts[i - 2:i])
+                    index[' '.join(parts[0:i - 2])].append(second)
+
         parent = ' '.join(parts[0:-1])
         completion = {
             'name': parts[-1],
@@ -108,6 +117,10 @@ def get_group_index(command_table):
         add_command_documentation(completion, command)
 
         index[parent].append(completion)
+        if TWO_SEGMENTS_COMPLETION_ENABLED and len_parts > 1:
+            second = completion.copy()
+            second['name'] = ' '.join(parts[len_parts - 2:len_parts])
+            index[' '.join(parts[0:len_parts - 2])].append(second)
     return index
 
 def get_snippets(command_table):
