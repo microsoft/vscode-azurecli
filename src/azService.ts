@@ -14,7 +14,8 @@ export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter
 export interface Completion {
     name: string;
     kind: CompletionKind;
-    description?: string;
+    detail?: string;
+    documentation?: string;
     snippet?: string;
 }
 

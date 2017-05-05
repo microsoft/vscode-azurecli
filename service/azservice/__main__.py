@@ -25,7 +25,7 @@ from azure.cli.core.help_files import helps
 AZ_COMPLETION = {
     'name': 'az',
     'kind': 'command',
-    'description': 'Microsoft command-line tools for Azure.'
+    'documentation': 'Microsoft command-line tools for Azure.'
 }
 
 GLOBAL_ARGUMENTS = {
@@ -91,22 +91,22 @@ def get_group_index(command_table):
                 parent = ' '.join(parts[0:i - 1])
                 completion = {
                     'name': parts[i - 1],
-                    'kind': 'group'
+                    'kind': 'group',
+                    'detail': group
                 }
                 if group in helps:
                     description = yaml.load(helps[group]).get('short-summary')
                     if description:
-                        completion['description'] = description
+                        completion['documentation'] = description
                 index[parent].append(completion)
         parent = ' '.join(parts[0:-1])
         completion = {
             'name': parts[-1],
-            'kind': 'command'
+            'kind': 'command',
+            'detail': command.name
         }
-        if command.name in helps:
-            description = yaml.load(helps[command.name]).get('short-summary')
-            if description:
-                completion['description'] = description
+        add_command_documentation(completion, command)
+
         index[parent].append(completion)
     return index
 
@@ -115,17 +115,29 @@ def get_snippets(command_table):
     for command in command_table.values():
         completion = {
             'name': ' '.join(reversed(command.name.split())),
-            'kind': 'snippet'
+            'kind': 'snippet',
+            'detail': command.name
         }
-        if command.name in helps:
-            description = yaml.load(helps[command.name]).get('short-summary')
-            if description:
-                completion['description'] = description
+        add_command_documentation(completion, command)
         snippets.append({
             'subcommand': command.name,
             'completion': completion
         })
     return snippets
+
+def add_command_documentation(completion, command):
+    if command.name in helps:
+        help = yaml.load(helps[command.name])
+        short_summary = help.get('short-summary')
+        if short_summary:
+            completion['documentation'] = short_summary
+            long_summary = help.get('long-summary')
+            if long_summary:
+                completion['documentation'] += '\n\n' + long_summary
+            examples = help.get('examples')
+            if examples:
+                for example in examples:
+                    completion['documentation'] += '\n\n' + example['name'].strip() + '\n' + example['text'].strip()
 
 def load_profile():
     azure_folder = cli_config_dir()
@@ -186,7 +198,7 @@ def get_parameter_name_completions(command_table, query):
         'kind': 'argument_name',
         'required': hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True,
         'default': hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and find_default(argument.type.default_name_tooling) != None,
-        'description': argument.type.settings.get('help')
+        'documentation': argument.type.settings.get('help')
     } for argument in unused for option in argument.options_list ]
 
 def get_parameter_value_completions(command_table, query, verbose=False):
@@ -267,7 +279,7 @@ def get_global_parameter_name_completions(query):
     return [ {
         'name': option,
         'kind': 'argument_name',
-        'description': argument.get('help')
+        'documentation': argument.get('help')
     } for argument in unused for option in argument['options'] ]
 
 def get_global_parameter_value_list(query, verbose=False):
