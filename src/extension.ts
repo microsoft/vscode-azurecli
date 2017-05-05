@@ -191,6 +191,7 @@ class StatusBarInfo {
 
     constructor(private azService: AzService) {
         this.disposables.push(this.info = window.createStatusBarItem(StatusBarAlignment.Left));
+        this.disposables.push(window.onDidChangeActiveTextEditor(() => this.update()));
         this.disposables.push({ dispose: () => this.timer && clearTimeout(this.timer) });
         this.refresh()
             .catch(console.error);
@@ -201,13 +202,18 @@ class StatusBarInfo {
             clearTimeout(this.timer);
         }
         const status = await this.azService.getStatus();
-        if (status.message) {
-            this.info.text = status.message;
-            this.info.show();
-        } else {
-            this.info.hide();
-        }
-        this.timer = setTimeout(() => this.refresh(), 5000);
+        this.info.text = status.message;
+        this.update();
+        this.timer = setTimeout(() => {
+            this.refresh()
+                .catch(console.error);
+        }, 5000);
+    }
+
+    private update() {
+        const editor = window.activeTextEditor;
+        const show = this.info.text && editor && editor.document.languageId === 'azcli';
+        this.info[show ? 'show' : 'hide']();
     }
 
     dispose() {
