@@ -237,7 +237,7 @@ def get_parameter_name_completions(command_table, query):
         'kind': 'argument_name',
         'required': hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True,
         'default': argument.type.settings.get('default') is not None or
-            hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and find_default(argument.type.default_name_tooling) != None,
+            hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and not not find_default(argument.type.default_name_tooling),
         'documentation': argument.type.settings.get('help')
     } for argument in unused if argument.type.settings.get('help') != '==SUPPRESS==' for option in argument.options_list ]
 
@@ -338,9 +338,23 @@ def get_status():
     load_profile()
     try:
         subscription = PROFILE.get_subscription()[_SUBSCRIPTION_NAME]
-        return { 'message': 'Subscription: {0}'.format(subscription) }
+        defaults = get_defaults_status()
+        return { 'message': 'Subscription: {0}{1}'.format(subscription, defaults) }
     except CLIError:
         return { 'message': 'Not logged in' }
+
+def get_defaults_status():
+    reload_config()
+    try:
+        options = az_config.config_parser.options(DEFAULTS_SECTION)
+        defaults_status = ''
+        for opt in options:
+            value = az_config.get(DEFAULTS_SECTION, opt)
+            if value:
+                defaults_status += ', ' + opt.capitalize() + ': ' + az_config.get(DEFAULTS_SECTION, opt)
+        return defaults_status
+    except configparser.NoSectionError:
+        return ''
 
 def main():
     timings = False
