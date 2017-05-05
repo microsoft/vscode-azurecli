@@ -22,8 +22,9 @@ from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 from azure.cli.core.help_files import helps
 
-TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'appservice web', 'appservice plan', etc. as proposals.
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
+AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
+TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'appservice web', 'appservice plan', etc. as proposals.
 
 AZ_COMPLETION = {
     'name': 'az',
@@ -332,7 +333,7 @@ def main():
 
     command_table = load_command_table()
     group_index = get_group_index(command_table)
-    snippets = get_snippets(command_table)
+    snippets = get_snippets(command_table) if AUTOMATIC_SNIPPETS_ENABLED else []
 
     while True:
         line = stdin.readline()
