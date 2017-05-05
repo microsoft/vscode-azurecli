@@ -54,6 +54,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                 if (documentation) {
                     item.documentation = documentation;
                 }
+                item.commitCharacters = [' '];
                 return item;
             }));
     }
