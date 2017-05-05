@@ -234,7 +234,8 @@ def get_parameter_name_completions(command_table, query):
         'name': option,
         'kind': 'argument_name',
         'required': hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True,
-        'default': hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and find_default(argument.type.default_name_tooling) != None,
+        'default': argument.type.settings.get('default') is not None or
+            hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and find_default(argument.type.default_name_tooling) != None,
         'documentation': argument.type.settings.get('help')
     } for argument in unused if argument.type.settings.get('help') != '==SUPPRESS==' for option in argument.options_list ]
 
