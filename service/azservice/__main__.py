@@ -18,10 +18,12 @@ from six.moves import configparser
 
 from azure.cli.core.application import APPLICATION, Configuration
 from azure.cli.core.commands import _update_command_definitions, BLACKLISTED_MODS
+from azure.cli.core._profile import _SUBSCRIPTION_NAME, Profile
 from azure.cli.core._session import ACCOUNT
 from azure.cli.core._environment import get_config_dir as cli_config_dir
 from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
 from azure.cli.core.help_files import helps
+from azure.cli.core.util import CLIError
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -330,6 +332,16 @@ def get_global_parameter_value_list(query, verbose=False):
         elif verbose: print('Completions not found ({})'.format(argument_name), file=stderr)
     return []
 
+PROFILE = Profile()
+
+def get_status():
+    load_profile()
+    try:
+        subscription = PROFILE.get_subscription()[_SUBSCRIPTION_NAME]
+        return { 'message': 'Subscription: {0}'.format(subscription) }
+    except CLIError:
+        return { 'message': 'Not logged in' }
+
 def main():
     timings = False
     start = time.time()
@@ -351,10 +363,14 @@ def main():
     while True:
         line = stdin.readline()
         request = json.loads(line)
-        completions = get_completions(group_index, command_table, snippets, request['query'], True)
+        response_data = None
+        if request['data'].get('request') == 'status':
+            response_data = get_status()
+        else:
+            response_data = get_completions(group_index, command_table, snippets, request['data'], True)
         response = {
             'sequence': request['sequence'],
-            'completions': completions
+            'data': response_data
         }
         output = json.dumps(response)
         print(output)
@@ -362,17 +378,18 @@ def main():
 
 main()
 
-# {"sequence":4,"query":{}}
-# {"sequence":4,"query":{"subcommand":""}}
-# {"sequence":4,"query":{"subcommand":"appservice"}}
-# {"sequence":4,"query":{"subcommand":"appservice plan"}}
-# {"sequence":4,"query":{"subcommand":"appservice plan create","arguments": {}}}
-# {"sequence":4,"query":{"subcommand":"appservice web"}}
-# {"sequence":4,"query":{"subcommand":"appservice web create","arguments": {}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--resource-group":null}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","arguments": {"--output":"table"}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--resource-group","arguments": {}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
-# {"sequence":4,"query":{"subcommand":"appservice web browse","argument":"--output","arguments": {}}}
+# {"sequence":4,"data":{"request":"status"}}
+# {"sequence":4,"data":{}}
+# {"sequence":4,"data":{"subcommand":""}}
+# {"sequence":4,"data":{"subcommand":"appservice"}}
+# {"sequence":4,"data":{"subcommand":"appservice plan"}}
+# {"sequence":4,"data":{"subcommand":"appservice plan create","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"appservice web"}}
+# {"sequence":4,"data":{"subcommand":"appservice web create","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{"--resource-group":null}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{"--output":"table"}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--resource-group","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
+# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--output","arguments":{}}}

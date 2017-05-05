@@ -11,8 +11,10 @@ import { AzService, CompletionKind, Arguments } from './azService';
 import { exec } from './utils';
 
 export function activate(context: ExtensionContext) {
-    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(), ' '));
+    const azService = new AzService(azNotFound);
+    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
     context.subscriptions.push(new RunLineInEditor());
+    context.subscriptions.push(new StatusBarInfo(azService));
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -25,7 +27,8 @@ const completionKinds: Record<CompletionKind, CompletionItemKind> = {
 
 class AzCompletionItemProvider implements CompletionItemProvider {
 
-    private azService = new AzService(azNotFound);
+    constructor(private azService: AzService) {
+    }
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
         const line = document.lineAt(position);
@@ -173,6 +176,38 @@ class RunLineInEditor {
     private getQueryParameter(line: string) {
         return (/\s--query\s+("([^"]*)"|'([^']*)'|([^\s"']+))/.exec(line) as string[] || [])
             .filter(group => !!group)[2];
+    }
+
+    dispose() {
+        this.disposables.forEach(disposable => disposable.dispose());
+    }
+}
+
+class StatusBarInfo {
+
+    private info: StatusBarItem;
+    private timer: NodeJS.Timer;
+    private disposables: Disposable[] = [];
+
+    constructor(private azService: AzService) {
+        this.disposables.push(this.info = window.createStatusBarItem(StatusBarAlignment.Left));
+        this.disposables.push({ dispose: () => this.timer && clearTimeout(this.timer) });
+        this.refresh()
+            .catch(console.error);
+    }
+
+    public async refresh() {
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
+        const status = await this.azService.getStatus();
+        if (status.message) {
+            this.info.text = status.message;
+            this.info.show();
+        } else {
+            this.info.hide();
+        }
+        this.timer = setTimeout(() => this.refresh(), 5000);
     }
 
     dispose() {

@@ -27,21 +27,24 @@ export interface CompletionQuery {
     arguments?: Arguments
 }
 
-interface Request {
-    sequence: number;
-    query: CompletionQuery;
+export interface Status {
+    message: string;
 }
 
-interface Response {
+interface StatusQuery {
+    request: 'status';
+}
+
+interface Message<T> {
     sequence: number;
-    completions: Completion[];
+    data: T;
 }
 
 export class AzService {
 
     private process: Promise<ChildProcess> | undefined;
     private data = '';
-    private listeners: { [sequence: number]: ((response: Response) => void); } = {};
+    private listeners: { [sequence: number]: ((response: Message<any>) => void); } = {};
     private nextSequenceNumber = 1;
 
     constructor(azNotFound: () => void) {
@@ -54,24 +57,32 @@ export class AzService {
 
     async getCompletions(query: CompletionQuery): Promise<Completion[]> {
         try {
-            const process = await this.getProcess();
-            return new Promise<Completion[]>((resolve, reject) => {
-                const sequence = this.nextSequenceNumber++;
-                this.listeners[sequence] = response => {
-                    try {
-                        resolve(response.completions);
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                const request: Request = { sequence, query };
-                const data = JSON.stringify(request);
-                process.stdin.write(data + '\n', 'utf8');
-            });
+            return this.send<CompletionQuery, Completion[]>(query);
         } catch (err) {
             console.error(err);
             return [];
         }
+    }
+
+    async getStatus(): Promise<Status> {
+        return this.send<StatusQuery, Status>({ request: 'status' });
+    }
+
+    private async send<T, R>(data: T): Promise<R> {
+        const process = await this.getProcess();
+        return new Promise<R>((resolve, reject) => {
+            const sequence = this.nextSequenceNumber++;
+            this.listeners[sequence] = response => {
+                try {
+                    resolve(response.data);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            const request: Message<T> = { sequence, data };
+            const str = JSON.stringify(request);
+            process.stdin.write(str + '\n', 'utf8');
+        });
     }
 
     private async getProcess(): Promise<ChildProcess> {
