@@ -12,6 +12,7 @@ from sys import stdin, stdout, stderr
 import json
 import pkgutil
 import yaml
+import time
 
 from six.moves import configparser
 
@@ -329,11 +330,22 @@ def get_global_parameter_value_list(query, verbose=False):
     return []
 
 def main():
+    timings = False
+    start = time.time()
     load_profile()
+    if timings: print('load_profile {} s'.format(time.time() - start), file=stderr)
 
+    start = time.time()
     command_table = load_command_table()
+    if timings: print('load_command_table {} s'.format(time.time() - start), file=stderr)
+
+    start = time.time()
     group_index = get_group_index(command_table)
+    if timings: print('get_group_index {} s'.format(time.time() - start), file=stderr)
+
+    start = time.time()
     snippets = get_snippets(command_table) if AUTOMATIC_SNIPPETS_ENABLED else []
+    if timings: print('get_snippets {} s'.format(time.time() - start), file=stderr)
 
     while True:
         line = stdin.readline()
