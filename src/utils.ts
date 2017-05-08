@@ -13,3 +13,7 @@ export function exec(command: string) {
         });
     });
 }
+
+export function never(n: never) {
+    throw new Error(`Should not happen: ${n}`);
+}

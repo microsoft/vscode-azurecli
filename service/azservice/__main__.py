@@ -222,7 +222,7 @@ def with_snippet(command_table, subcommand, snippet_prefix, completion):
     snippet = snippet_prefix
     tabstop = 1
     for parameter in parameters:
-        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--') and parameter['name'] != '--is-linux':
+        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--'):
             snippet += ' ' + parameter['name'] + '$' + str(tabstop)
             tabstop += 1
     if snippet != completion['name']:
@@ -240,7 +240,7 @@ def get_parameter_name_completions(command_table, query):
     return [ {
         'name': option,
         'kind': 'argument_name',
-        'required': hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True,
+        'required': is_required(argument),
         'default': argument.type.settings.get('default') is not None or
             hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and not not find_default(argument.type.default_name_tooling),
         'documentation': argument.type.settings.get('help')
@@ -361,6 +361,42 @@ def get_defaults_status():
     except configparser.NoSectionError:
         return ''
 
+def get_hover_text(group_index, command_table, subcommand):
+    if subcommand in helps:
+        help = yaml.load(helps[subcommand])
+        short_summary = help.get('short-summary')
+        if short_summary:
+            paragraphs = [ '{1}\n\n`{0}`\n\n{2}'.format(subcommand, short_summary, help.get('long-summary', '')).strip() ]
+            if subcommand in command_table:
+                list = sorted([ argument for argument in command_table[subcommand].arguments.values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + e.options_list[0])
+                if list:
+                    paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(argument.options_list) + '`' + ('*' if is_required(argument) else '') + ': ' + argument.type.settings.get('help')
+                        for argument in list ]) + ('\n\n*Required' if is_required(list[0]) else ''))
+                paragraphs.append('Global Arguments\n' + '\n'.join([ '- `' + ' '.join(argument['options']) + '`: ' + argument['help']
+                    for argument in GLOBAL_ARGUMENTS.values() ]))
+            elif subcommand in group_index:
+                list = sorted(group_index[subcommand], key=lambda e: e['name'])
+                groups = [ element for element in list if element['kind'] == 'group' ]
+                if groups:
+                    paragraphs.append('Subgroups\n' + '\n'.join([ '- `' + element['name'] + '`: ' + get_short_summary(element.get('detail'), '-') for element in groups ]))
+                commands = [ element for element in list if element['kind'] == 'command' ]
+                if commands:
+                    paragraphs.append('Commands\n' + '\n'.join([ '- `' + element['name'] + '`: ' + get_short_summary(element.get('detail'), '-') for element in commands ]))
+            examples = help.get('examples')
+            if examples:
+                paragraphs.append('Examples\n\n' + '\n\n'.join([ '{0}\n```azcli\n{1}\n```'.format(example['name'].strip(), example['text'].strip())
+                    for example in examples ]))
+            return { 'paragraphs': paragraphs }
+
+def is_required(argument):
+    return hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True and argument.name != 'is_linux'
+
+def get_short_summary(subcommand, fallback):
+    if subcommand in helps:
+        help = yaml.load(helps[subcommand])
+        return help.get('short-summary', fallback)
+    return fallback
+
 def main():
     timings = False
     start = time.time()
@@ -385,6 +421,10 @@ def main():
         response_data = None
         if request['data'].get('request') == 'status':
             response_data = get_status()
+        elif request['data'].get('request') == 'hover':
+            start = time.time()
+            response_data = get_hover_text(group_index, command_table, request['data']['command']['subcommand'])
+            if timings: print('get_hover_text {} s'.format(time.time() - start), file=stderr)
         else:
             response_data = get_completions(group_index, command_table, snippets, request['data'], True)
         response = {
@@ -412,3 +452,6 @@ main()
 # {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
 # {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
 # {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--output","arguments":{}}}
+# {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice"}}}
+# {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice something"}}}
+# {"sequence":4,"data":{"request":"hover","command":{"subcommand":"acs create"}}}

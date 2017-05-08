@@ -35,6 +35,19 @@ interface StatusQuery {
     request: 'status';
 }
 
+export interface HoverText {
+    paragraphs: (string | { language: string; value: string })[];
+}
+
+export interface Command {
+    subcommand: string;
+}
+
+interface HoverQuery {
+    request: 'hover';
+    command: Command;
+}
+
 interface Message<T> {
     sequence: number;
     data: T;
@@ -66,6 +79,13 @@ export class AzService {
 
     async getStatus(): Promise<Status> {
         return this.send<StatusQuery, Status>({ request: 'status' });
+    }
+
+    async getHover(command: Command): Promise<HoverText> {
+        return this.send<HoverQuery, HoverText>({
+            request: 'hover',
+            command
+        });
     }
 
     private async send<T, R>(data: T): Promise<R> {

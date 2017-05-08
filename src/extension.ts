@@ -5,14 +5,16 @@
 import * as jmespath from 'jmespath';
 import * as opn from 'opn';
 
-import { SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
 import { AzService, CompletionKind, Arguments } from './azService';
+import { parse, findNode } from './parser';
 import { exec } from './utils';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
     context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
+    context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
     context.subscriptions.push(new RunLineInEditor());
     context.subscriptions.push(new StatusBarInfo(azService));
 }
@@ -79,6 +81,27 @@ class AzCompletionItemProvider implements CompletionItemProvider {
             }
         }
         return args;
+    }
+}
+
+class AzHoverProvider implements HoverProvider {
+
+    constructor(private azService: AzService) {
+    }
+
+    provideHover(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<Hover> {
+        const line = document.lineAt(position.line).text;
+        const command = parse(line);
+        const node = findNode(command, position.character);
+        if (node && node.kind === 'subcommand' && command.subcommand[0].text === 'az') {
+            const i = command.subcommand.indexOf(node);
+            if (i > 0) {
+                const subcommand = command.subcommand.slice(1, i + 1)
+                    .map(node => node.text).join(' ');
+                return this.azService.getHover({ subcommand })
+                    .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
+            }
+        }
     }
 }
 
