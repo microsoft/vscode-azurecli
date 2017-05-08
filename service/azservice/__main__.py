@@ -28,6 +28,7 @@ from azure.cli.core.util import CLIError
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
 TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'appservice web', 'appservice plan', etc. as proposals.
+REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS = False # Adds required parameters to command completions (always for snippets)
 
 AZ_COMPLETION = {
     'name': 'az',
@@ -199,6 +200,8 @@ def get_snippet_completions(command_table, snippets):
     ]
 
 def get_command_completions(group_index, command_table, command_name):
+    if not REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS:
+        return group_index[command_name]
     return [
         (with_snippet(command_table, (command_name + ' ' + completion['name']).strip(), completion['name'], completion)
             if completion['kind'] == 'command' else completion)
@@ -206,6 +209,8 @@ def get_command_completions(group_index, command_table, command_name):
     ]
 
 def get_prefix_command_completions(group_index, command_table):
+    if not REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS:
+        return group_index['-']
     return [
         (with_snippet(command_table, completion['name'], completion['snippet'], completion)
             if completion['kind'] == 'command' else completion)
