@@ -29,9 +29,14 @@ export function parse(line: string) {
     while (m = regex.exec(line)) {
         const text = m[0];
         const length = text.length;
+        const isParameter = text.startsWith('-');
+        const isComment = text.startsWith('#');
+        if (isParameter || isComment) {
+            subcommand = false;
+        }
         tokens.push({
-            kind: subcommand ? 'subcommand' : text.startsWith('-') ? 'parameter_name' :
-                    text.startsWith('#') ? 'comment' : 'parameter_value',
+            kind: subcommand ? 'subcommand' : isParameter ? 'parameter_name' :
+                    isComment ? 'comment' : 'parameter_value',
             offset: regex.lastIndex - length,
             length,
             text

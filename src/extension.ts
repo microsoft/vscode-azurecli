@@ -92,14 +92,24 @@ class AzHoverProvider implements HoverProvider {
     provideHover(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<Hover> {
         const line = document.lineAt(position.line).text;
         const command = parse(line);
-        const node = findNode(command, position.character);
-        if (node && node.kind === 'subcommand' && command.subcommand[0].text === 'az') {
-            const i = command.subcommand.indexOf(node);
-            if (i > 0) {
-                const subcommand = command.subcommand.slice(1, i + 1)
-                    .map(node => node.text).join(' ');
-                return this.azService.getHover({ subcommand })
-                    .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
+        const list = command.subcommand;
+        if (list.length && list[0].text === 'az') {
+            const node = findNode(command, position.character);
+            if (node) {
+                if (node.kind === 'subcommand') {
+                    const i = list.indexOf(node);
+                    if (i > 0) {
+                        const subcommand = list.slice(1, i + 1)
+                            .map(node => node.text).join(' ');
+                        return this.azService.getHover({ subcommand })
+                            .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
+                    }
+                } else if (node.kind === 'parameter_name') {
+                    const subcommand = command.subcommand.slice(1)
+                        .map(node => node.text).join(' ');
+                    return this.azService.getHover({ subcommand, argument: node.text })
+                        .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
+                }
             }
         }
     }

@@ -41,6 +41,7 @@ export interface HoverText {
 
 export interface Command {
     subcommand: string;
+    argument?: string;
 }
 
 interface HoverQuery {

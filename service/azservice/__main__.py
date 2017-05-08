@@ -360,7 +360,16 @@ def get_defaults_status():
     except configparser.NoSectionError:
         return ''
 
-def get_hover_text(group_index, command_table, subcommand):
+def get_hover_text(group_index, command_table, command):
+    subcommand = command['subcommand']
+    if 'argument' in command and subcommand in command_table:
+        argument_name = command['argument']
+        argument = next((argument for argument in command_table[subcommand].arguments.values() if argument_name in argument.options_list), None)
+        if argument:
+            req = is_required(argument)
+            return { 'paragraphs': [ '`' + ' '.join(argument.options_list) + '`' + ('*' if req else '') + ': ' + argument.type.settings.get('help')
+                 + ('\n\n*Required' if req else '') ] }
+
     if subcommand in helps:
         help = yaml.load(helps[subcommand])
         short_summary = help.get('short-summary')
@@ -422,7 +431,7 @@ def main():
             response_data = get_status()
         elif request['data'].get('request') == 'hover':
             start = time.time()
-            response_data = get_hover_text(group_index, command_table, request['data']['command']['subcommand'])
+            response_data = get_hover_text(group_index, command_table, request['data']['command'])
             if timings: print('get_hover_text {} s'.format(time.time() - start), file=stderr)
         else:
             response_data = get_completions(group_index, command_table, snippets, request['data'], True)
