@@ -7,7 +7,7 @@ import * as opn from 'opn';
 
 import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
 
-import { AzService, CompletionKind, Arguments } from './azService';
+import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
 
@@ -15,8 +15,9 @@ export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
     context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
     context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
-    context.subscriptions.push(new RunLineInEditor());
-    context.subscriptions.push(new StatusBarInfo(azService));
+    const status = new StatusBarInfo(azService);
+    context.subscriptions.push(status);
+    context.subscriptions.push(new RunLineInEditor(status));
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -126,15 +127,11 @@ class RunLineInEditor {
     private resultDocument: TextDocument | undefined;
     private parsedResult: object | undefined;
     private queryEnabled = false;
-    private queryEnabledStatus: StatusBarItem;
     private query: string | undefined;
     private disposables: Disposable[] = [];
 
-    constructor() {
+    constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
-        this.disposables.push(this.queryEnabledStatus = window.createStatusBarItem(StatusBarAlignment.Right));
-        this.queryEnabledStatus.text = 'Az Live Query';
-        this.queryEnabledStatus.command = 'ms-azurecli.toggleLiveQuery';
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInEditor', editor => this.run(editor)));
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
@@ -160,7 +157,8 @@ class RunLineInEditor {
 
     private toggleQuery(source: TextEditor) {
         this.queryEnabled = !this.queryEnabled;
-        this.queryEnabledStatus[this.queryEnabled ? 'show' : 'hide']();
+        this.status.liveQuery = this.queryEnabled;
+        this.status.update();
         this.updateResult();
     }
 
@@ -225,6 +223,9 @@ class RunLineInEditor {
 class StatusBarInfo {
 
     private info: StatusBarItem;
+    private status: Status;
+    public liveQuery = false;
+
     private timer: NodeJS.Timer;
     private disposables: Disposable[] = [];
 
@@ -240,8 +241,7 @@ class StatusBarInfo {
         if (this.timer) {
             clearTimeout(this.timer);
         }
-        const status = await this.azService.getStatus();
-        this.info.text = status.message;
+        this.status = await this.azService.getStatus();
         this.update();
         this.timer = setTimeout(() => {
             this.refresh()
@@ -249,7 +249,15 @@ class StatusBarInfo {
         }, 5000);
     }
 
-    private update() {
+    public update() {
+        const texts: string[] = [];
+        if (this.status && this.status.message) {
+            texts.push(this.status.message);
+        }
+        if (this.liveQuery) {
+            texts.push('Live Query');
+        }
+        this.info.text = texts.join(', ');
         const editor = window.activeTextEditor;
         const show = this.info.text && editor && editor.document.languageId === 'azcli';
         this.info[show ? 'show' : 'hide']();
