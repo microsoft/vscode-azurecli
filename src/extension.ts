@@ -33,15 +33,21 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     }
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
-        const line = document.lineAt(position);
-        const upToCursor = line.text.substr(0, position.character);
+        const line = document.lineAt(position).text;
+        const parsed = parse(line);
+        const node = findNode(parsed, position.character - 1);
+        if (node && node.kind === 'comment') {
+            return;
+        }
+        // TODO: Use the above instead of parsing again.
+        const upToCursor = line.substr(0, position.character);
         const rawSubcommand = (/^\s*(([^-\s][^\s]*\s+)*)/.exec(upToCursor) || [])[1];
         if (typeof rawSubcommand !== 'string') {
             return Promise.resolve([]);
         }
         const subcommand = rawSubcommand.trim()
             .split(/\s+/);
-        const args = this.getArguments(line.text);
+        const args = this.getArguments(line);
         const argument = (/\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor) || [])[1];
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
