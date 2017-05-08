@@ -1,6 +1,6 @@
 # Login and set default subscription
 az login 
-az account set --subscription "Try Out Subscription" 
+az account set --subscription "Try Out Subscription"
 
 # Create resource group
 az group create --name chrmarti-test --location westus
@@ -8,27 +8,27 @@ az configure --defaults group=chrmarti-test
 
 # Create web app
 az appservice plan create --name chrmarti-plan --is-linux --sku B2
-az appservice web create --name chrmarti-web --plan chrmarti-plan 
+az webapp create --name chrmarti-web --plan chrmarti-plan 
 az configure --defaults web=chrmarti-web
 
 # Set up deployment
-az appservice web deployment user set --user-name --password
-az appservice web source-control config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
+az webapp deployment user set --user-name --password
+az webapp source-control config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
 # Or
-az appservice web config container update --docker-custom-image-name tutum/hello-world
-az appservice web browse
+az webapp config container update --docker-custom-image-name tutum/hello-world
+az webapp browse
 
 # Status
-az appservice web show --query "{Host: defaultHostName, State: state}"
-az appservice web show --query state
-az appservice web list --query "[].{Host: defaultHostName, State: state}"
-az appservice web list --query [].defaultHostName
+az webapp show --query "{Host: defaultHostName, State: state}"
+az webapp show --query state
+az webapp list --query "[].{Host: defaultHostName, State: state}"
+az webapp list --query [].defaultHostName
 
 # Tailing
-az appservice web log tail
+az webapp log tail
 
 # Restart website
-az appservice web restart
+az webapp restart
 
 # Clean up
 az group delete --name chrmarti-test

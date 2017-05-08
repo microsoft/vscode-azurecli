@@ -296,7 +296,6 @@ def get_argument(command, argument_name):
     return None, None
 
 def add_defaults(command, arguments):
-    # TODO Needs PR: https://github.com/Azure/azure-cli/pull/3132
     reloaded = False
     for name, argument in command.arguments.items():
         if not hasattr(arguments, name) and hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling:
