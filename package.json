@@ -66,19 +66,19 @@
         "command": "workbench.action.terminal.runSelectedText",
         "key": "ctrl+'",
         "mac": "cmd+'",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && resourceLangId == 'azcli'"
       },
       {
         "command": "ms-azurecli.runLineInEditor",
         "key": "ctrl+shift+'",
         "mac": "cmd+shift+'",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && resourceLangId == 'azcli'"
       },
       {
         "command": "ms-azurecli.toggleLiveQuery",
         "key": "ctrl+;",
         "mac": "cmd+;",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && resourceLangId == 'azcli'"
       }
     ]
   },
