@@ -4,7 +4,7 @@
   "description": "Tools for developing and running commands of the Azure CLI.",
   "version": "0.0.1",
   "icon": "images/azure_icon.png",
-  "publisher": "vscode",
+  "publisher": "ms-vscode",
   "repository": {
     "type": "git",
     "url": "https://github.com/Microsoft/vscode-azurecli.git"
