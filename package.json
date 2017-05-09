@@ -25,12 +25,6 @@
   ],
   "main": "./out/src/extension",
   "contributes": {
-    "snippets": [
-      {
-        "language": "azcli",
-        "path": "./snippets/snippets.json"
-      }
-    ],
     "languages": [
       {
         "id": "azcli",

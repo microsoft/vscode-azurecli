@@ -27,7 +27,7 @@ from azure.cli.core.util import CLIError
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
-TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'appservice web', 'appservice plan', etc. as proposals.
+TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'webapp create', 'appservice plan', etc. as proposals.
 REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS = False # Adds required parameters to command completions (always for snippets)
 
 AZ_COMPLETION = {
@@ -453,15 +453,15 @@ main()
 # {"sequence":4,"data":{"subcommand":"appservice"}}
 # {"sequence":4,"data":{"subcommand":"appservice plan"}}
 # {"sequence":4,"data":{"subcommand":"appservice plan create","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"appservice web"}}
-# {"sequence":4,"data":{"subcommand":"appservice web create","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{"--resource-group":null}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","arguments":{"--output":"table"}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--resource-group","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
-# {"sequence":4,"data":{"subcommand":"appservice web browse","argument":"--output","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp"}}
+# {"sequence":4,"data":{"subcommand":"webapp create","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","arguments":{"--resource-group":null}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","arguments":{"--output":"table"}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--resource-group","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--name","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--output","arguments":{}}}
 # {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice"}}}
 # {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice something"}}}
 # {"sequence":4,"data":{"request":"hover","command":{"subcommand":"acs create"}}}
