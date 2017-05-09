@@ -5,6 +5,8 @@
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 
+import { gte } from 'semver';
+
 import { exec } from './utils';
 
 const isWindows = process.platform === 'win32';
@@ -61,11 +63,11 @@ export class AzService {
     private listeners: { [sequence: number]: ((response: Message<any>) => void); } = {};
     private nextSequenceNumber = 1;
 
-    constructor(azNotFound: () => void) {
+    constructor(azNotFound: (wrongVersion: boolean) => void) {
         this.getProcess()
             .catch(err => {
                 console.log(err);
-                azNotFound();
+                azNotFound(err === 'wrongVersion');
             });
     }
 
@@ -111,6 +113,10 @@ export class AzService {
             return this.process;
         }
         return this.process = exec('az --version').then(({stdout}) => {
+            const version = (/azure-cli \(([^)]+)\)/m.exec(stdout) || [])[1];
+            if (version && !gte(version, '2.0.5')) {
+                throw 'wrongVersion';
+            }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
             return this.spawn(pythonLocation);
         }).catch(err => {

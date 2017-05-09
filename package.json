@@ -105,6 +105,7 @@
     "@types/mocha": "^2.2.32",
     "@types/node": "^7.0.13",
     "@types/opn": "^3.0.28",
+    "@types/semver": "^5.3.31",
     "mocha": "^2.3.3",
     "tslint": "^5.1.0",
     "typescript": "^2.3.1",
@@ -112,6 +113,7 @@
   },
   "dependencies": {
     "jmespath": "^0.15.0",
-    "opn": "^5.0.0"
+    "opn": "^5.0.0",
+    "semver": "^5.3.0"
   }
 }
