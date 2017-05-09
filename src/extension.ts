@@ -17,6 +17,7 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
     const status = new StatusBarInfo(azService);
     context.subscriptions.push(status);
+    context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
 }
 
@@ -119,6 +120,23 @@ class AzHoverProvider implements HoverProvider {
                 }
             }
         }
+    }
+}
+
+class RunLineInTerminal {
+
+    private disposables: Disposable[] = [];
+
+    constructor() {
+        this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInTerminal', editor => this.run(editor)));
+    }
+
+    private run(editor: TextEditor) {
+        return commands.executeCommand('workbench.action.terminal.runSelectedText', editor);
+    }
+
+    dispose() {
+        this.disposables.forEach(disposable => disposable.dispose());
     }
 }
 

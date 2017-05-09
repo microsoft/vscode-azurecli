@@ -53,8 +53,12 @@
     ],
     "commands": [
       {
+        "command": "ms-azurecli.runLineInTerminal",
+        "title": "Run Line in Terminal"
+      },
+      {
         "command": "ms-azurecli.runLineInEditor",
-        "title": "Run Line and Show in Editor"
+        "title": "Run Line in Editor"
       },
       {
         "command": "ms-azurecli.toggleLiveQuery",
@@ -63,7 +67,7 @@
     ],
     "keybindings": [
       {
-        "command": "workbench.action.terminal.runSelectedText",
+        "command": "ms-azurecli.runLineInTerminal",
         "key": "ctrl+'",
         "mac": "cmd+'",
         "when": "editorTextFocus && resourceLangId == 'azcli'"
@@ -80,7 +84,21 @@
         "mac": "cmd+;",
         "when": "editorTextFocus && resourceLangId == 'azcli'"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "ms-azurecli.runLineInTerminal",
+          "group": "2_run",
+          "when": "resourceLangId == 'azcli'"
+        },
+        {
+          "command": "ms-azurecli.runLineInEditor",
+          "group": "2_run",
+          "when": "resourceLangId == 'azcli'"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
