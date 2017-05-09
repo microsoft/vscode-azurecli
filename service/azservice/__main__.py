@@ -146,6 +146,8 @@ def get_group_index(command_table):
 def get_snippets(command_table):
     snippets = []
     for command in command_table.values():
+        if command.name.startswith('appservice web'):
+            continue
         completion = {
             'name': ' '.join(reversed(command.name.split())),
             'kind': 'snippet',
