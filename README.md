@@ -5,8 +5,8 @@ Scrapbooks for developing and running commands with the [Azure CLI](https://aka.
 Create `.azcli` files and use these features:
 - IntelliSense for commands and their arguments.
 - Snippets for commands, inserting required arguments automatically.
-- Run the current command in the integrated terminal (`Ctrl + '`).
-- Run the current command and show its output in a side-by-side editor (`Ctrl + Shift + '`).
+- Run the current command in the integrated terminal.
+- Run the current command and show its output in a side-by-side editor.
 - Show documentation on mouse hover.
 - Display current subscription and defaults in status bar.
 
