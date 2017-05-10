@@ -28,7 +28,7 @@ from azure.cli.core.util import CLIError
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
 TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'webapp create', 'appservice plan', etc. as proposals.
-REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS = False # Adds required parameters to command completions (always for snippets)
+REQUIRED_ARGUMENTS_IN_COMMAND_COMPLETIONS = False # Adds required arguments to command completions (always for snippets)
 
 AZ_COMPLETION = {
     'name': 'az',
@@ -183,13 +183,13 @@ def load_profile():
 
 def get_completions(group_index, command_table, snippets, query, verbose=False):
     if 'argument' in query:
-        return get_parameter_value_completions(command_table, query, verbose)
+        return get_argument_value_completions(command_table, query, verbose)
     if 'subcommand' not in query:
         return get_snippet_completions(command_table, snippets) + get_prefix_command_completions(group_index, command_table) + [AZ_COMPLETION]
     command_name = query['subcommand']
     if command_name in command_table:
-        return get_parameter_name_completions(command_table, query) + \
-            get_global_parameter_name_completions(query)
+        return get_argument_name_completions(command_table, query) + \
+            get_global_argument_name_completions(query)
     if command_name in group_index:
         return get_command_completions(group_index, command_table, command_name)
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
@@ -202,7 +202,7 @@ def get_snippet_completions(command_table, snippets):
     ]
 
 def get_command_completions(group_index, command_table, command_name):
-    if not REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS:
+    if not REQUIRED_ARGUMENTS_IN_COMMAND_COMPLETIONS:
         return group_index[command_name]
     return [
         (with_snippet(command_table, (command_name + ' ' + completion['name']).strip(), completion['name'], completion)
@@ -211,7 +211,7 @@ def get_command_completions(group_index, command_table, command_name):
     ]
 
 def get_prefix_command_completions(group_index, command_table):
-    if not REQUIRED_PARAMETERS_IN_COMMAND_COMPLETIONS:
+    if not REQUIRED_ARGUMENTS_IN_COMMAND_COMPLETIONS:
         return group_index['-']
     return [
         (with_snippet(command_table, completion['name'], completion['snippet'], completion)
@@ -220,19 +220,19 @@ def get_prefix_command_completions(group_index, command_table):
     ]
 
 def with_snippet(command_table, subcommand, snippet_prefix, completion):
-    parameters = get_parameter_name_completions(command_table, { 'subcommand': subcommand, 'arguments': [] })
+    arguments = get_argument_name_completions(command_table, { 'subcommand': subcommand, 'arguments': [] })
     snippet = snippet_prefix
     tabstop = 1
-    for parameter in parameters:
-        if parameter['required'] and not parameter['default'] and parameter['name'].startswith('--'):
-            snippet += ' ' + parameter['name'] + '$' + str(tabstop)
+    for argument in arguments:
+        if argument['required'] and not argument['default'] and argument['name'].startswith('--'):
+            snippet += ' ' + argument['name'] + '$' + str(tabstop)
             tabstop += 1
     if snippet != completion['name']:
         completion = completion.copy()
         completion['snippet'] = snippet
     return completion
 
-def get_parameter_name_completions(command_table, query):
+def get_argument_name_completions(command_table, query):
     command_name = query['subcommand']
     command = command_table[command_name]
     arguments = query['arguments']
@@ -249,16 +249,16 @@ def get_parameter_name_completions(command_table, query):
         'sortText': ('10_' if is_required(argument) and not has_default(argument) else '20_') + option
     } for argument in unused if argument.type.settings.get('help') != '==SUPPRESS==' for option in argument.options_list ]
 
-def get_parameter_value_completions(command_table, query, verbose=False):
-    list = get_parameter_value_list(command_table, query, verbose) + \
-        get_global_parameter_value_list(query, verbose)
+def get_argument_value_completions(command_table, query, verbose=False):
+    list = get_argument_value_list(command_table, query, verbose) + \
+        get_global_argument_value_list(query, verbose)
     return [ {
         'name': item,
         'kind': 'argument_value',
         'snippet': '"' + item + '"' if ' ' in item else item
     } for item in list ]
 
-def get_parameter_value_list(command_table, query, verbose=False):
+def get_argument_value_list(command_table, query, verbose=False):
     command_name = query['subcommand']
     if command_name in command_table:
         command = command_table[command_name]
@@ -320,7 +320,7 @@ def find_default(default_name):
     except configparser.NoSectionError:
         return None
 
-def get_global_parameter_name_completions(query):
+def get_global_argument_name_completions(query):
     arguments = query['arguments']
     unused = [ argument for argument in GLOBAL_ARGUMENTS.values()
         if not [ option for option in argument['options'] if option in arguments ] ]
@@ -332,7 +332,7 @@ def get_global_parameter_name_completions(query):
         'sortText': '30_' + option
     } for argument in unused for option in argument['options'] ]
 
-def get_global_parameter_value_list(query, verbose=False):
+def get_global_argument_value_list(query, verbose=False):
     argument_name = query['argument']
     argument = next((argument for argument in GLOBAL_ARGUMENTS.values() if argument_name in argument['options']), None)
     if argument:

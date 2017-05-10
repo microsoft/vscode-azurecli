@@ -1,6 +1,6 @@
 import { never } from './utils';
 
-export type TokenKind = 'subcommand' | 'parameter_name' | 'parameter_value' | 'comment';
+export type TokenKind = 'subcommand' | 'argument_name' | 'argument_value' | 'comment';
 
 export interface Token {
     kind: TokenKind;
@@ -9,7 +9,7 @@ export interface Token {
     text: string;
 }
 
-export interface Parameter {
+export interface Argument {
     name?: Token;
     value?: Token;
 }
@@ -17,7 +17,7 @@ export interface Parameter {
 export interface Command {
     tokens: Token[];
     subcommand: Token[];
-    parameters: Parameter[];
+    arguments: Argument[];
     comment?: Token;
 }
 
@@ -29,14 +29,14 @@ export function parse(line: string) {
     while (m = regex.exec(line)) {
         const text = m[0];
         const length = text.length;
-        const isParameter = text.startsWith('-');
+        const isArgument = text.startsWith('-');
         const isComment = text.startsWith('#');
-        if (isParameter || isComment) {
+        if (isArgument || isComment) {
             subcommand = false;
         }
         tokens.push({
-            kind: subcommand ? 'subcommand' : isParameter ? 'parameter_name' :
-                    isComment ? 'comment' : 'parameter_value',
+            kind: subcommand ? 'subcommand' : isArgument ? 'argument_name' :
+                    isComment ? 'comment' : 'argument_value',
             offset: regex.lastIndex - length,
             length,
             text
@@ -46,23 +46,23 @@ export function parse(line: string) {
     const command: Command = {
         tokens,
         subcommand: [],
-        parameters: []
+        arguments: []
     };
-    const parameters = command.parameters;
+    const args = command.arguments;
 
     for (const token of tokens) {
         switch (token.kind) {
             case 'subcommand':
                 command.subcommand.push(token);
                 break;
-            case 'parameter_name':
-                parameters.push({ name: token });
+            case 'argument_name':
+                args.push({ name: token });
                 break;
-            case 'parameter_value':
-                if (parameters.length && !('value' in parameters[parameters.length - 1])) {
-                    parameters[parameters.length - 1].value = token;
+            case 'argument_value':
+                if (args.length && !('value' in args[args.length - 1])) {
+                    args[args.length - 1].value = token;
                 } else {
-                    parameters.push({ value: token });
+                    args.push({ value: token });
                 }
                 break;
             case 'comment':

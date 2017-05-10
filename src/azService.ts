@@ -11,7 +11,7 @@ import { exec } from './utils';
 
 const isWindows = process.platform === 'win32';
 
-export type CompletionKind = 'group' | 'command' | 'parameter_name' | 'parameter_value' | 'snippet';
+export type CompletionKind = 'group' | 'command' | 'argument_name' | 'argument_value' | 'snippet';
 
 export interface Completion {
     name: string;

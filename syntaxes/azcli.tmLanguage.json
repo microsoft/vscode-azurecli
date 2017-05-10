@@ -6,19 +6,19 @@
 			"include": "#subcommand"
 		},
 		{
-			"include": "#parameterName"
+			"include": "#argumentName"
 		},
 		{
 			"include": "#comments"
 		},
 		{
-			"include": "#parameterValueUnquoted"
+			"include": "#argumentValueUnquoted"
 		},
 		{
-			"include": "#parameterValueSingleQuoted"
+			"include": "#argumentValueSingleQuoted"
 		},
 		{
-			"include": "#parameterValueDoubleQuoted"
+			"include": "#argumentValueDoubleQuoted"
 		}
 	],
 	"repository": {
@@ -28,19 +28,19 @@
 				"match": "^([^\\s#-]-+|[^#-])+"
 			}]
 		},
-		"parameterName": {
+		"argumentName": {
 			"patterns": [{
 				"name": "variable.other.azcli",
 				"match": "-[^\\s#]*\\s*"
 			}]
 		},
-		"parameterValueUnquoted": {
+		"argumentValueUnquoted": {
 			"patterns": [{
 				"name": "string.unquoted.azcli",
 				"match": "[^\\s#]+\\s*"
 			}]
 		},
-		"parameterValueSingleQuoted": {
+		"argumentValueSingleQuoted": {
 			"name": "string.quoted.single.azcli",
 			"begin": "'",
 			"end": "'",
@@ -51,7 +51,7 @@
 				}
 			]
 		},
-		"parameterValueDoubleQuoted": {
+		"argumentValueDoubleQuoted": {
 			"name": "string.quoted.double.azcli",
 			"begin": "\"",
 			"end": "\"",

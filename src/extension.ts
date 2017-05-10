@@ -24,8 +24,8 @@ export function activate(context: ExtensionContext) {
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
     group: CompletionItemKind.Module,
     command: CompletionItemKind.Function,
-    parameter_name: CompletionItemKind.Variable,
-    parameter_value: CompletionItemKind.EnumMember,
+    argument_name: CompletionItemKind.Variable,
+    argument_value: CompletionItemKind.EnumMember,
     snippet: CompletionItemKind.Snippet
 };
 
@@ -119,7 +119,7 @@ class AzHoverProvider implements HoverProvider {
                         return this.azService.getHover({ subcommand })
                             .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
                     }
-                } else if (node.kind === 'parameter_name') {
+                } else if (node.kind === 'argument_name') {
                     const subcommand = command.subcommand.slice(1)
                         .map(node => node.text).join(' ');
                     return this.azService.getHover({ subcommand, argument: node.text })
@@ -207,7 +207,7 @@ class RunLineInEditor {
             const range = change.range;
             if (range.start.line === range.end.line) {
                 const line = e.document.lineAt(range.start.line).text;
-                const query = this.getQueryParameter(line);
+                const query = this.getQueryArgument(line);
                 if (query !== this.query) {
                     this.query = query;
                     if (this.queryEnabled) {
@@ -235,7 +235,7 @@ class RunLineInEditor {
         }
     }
 
-    private getQueryParameter(line: string) {
+    private getQueryArgument(line: string) {
         return (/\s--query\s+("([^"]*)"|'([^']*)'|([^\s"']+))/.exec(line) as string[] || [])
             .filter(group => !!group)[2];
     }
