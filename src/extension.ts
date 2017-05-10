@@ -37,6 +37,10 @@ class AzCompletionItemProvider implements CompletionItemProvider {
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
         const line = document.lineAt(position).text;
         const parsed = parse(line);
+        const start = parsed.subcommand[0];
+        if (start && start.offset + start.length < position.character && start.text !== 'az') {
+            return;
+        }
         const node = findNode(parsed, position.character - 1);
         if (node && node.kind === 'comment') {
             return;
