@@ -5,7 +5,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 
-import { gte } from 'semver';
+import * as semver from 'semver';
 
 import { exec } from './utils';
 
@@ -113,8 +113,14 @@ export class AzService {
             return this.process;
         }
         return this.process = exec('az --version').then(({stdout}) => {
-            const version = (/azure-cli \(([^)]+)\)/m.exec(stdout) || [])[1];
-            if (version && !gte(version, '2.0.5')) {
+            let version = (/azure-cli \(([^)]+)\)/m.exec(stdout) || [])[1];
+            if (version) {
+                const r = /[^-][a-z]/ig;
+                if (r.exec(version)) {
+                    version = version.substr(0, r.lastIndex - 1) + '-' + version.substr(r.lastIndex - 1);
+                }
+            }
+            if (version && semver.valid(version) && !semver.gte(version, '2.0.5')) {
                 throw 'wrongVersion';
             }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
