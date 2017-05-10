@@ -243,9 +243,10 @@ def get_parameter_name_completions(command_table, query):
         'name': option,
         'kind': 'argument_name',
         'required': is_required(argument),
-        'default': argument.type.settings.get('default') is not None or
-            hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and not not find_default(argument.type.default_name_tooling),
-        'documentation': argument.type.settings.get('help')
+        'default': has_default(argument),
+        'detail': 'required' if is_required(argument) and not has_default(argument) else None,
+        'documentation': argument.type.settings.get('help'),
+        'sortText': ('10_' if is_required(argument) and not has_default(argument) else '20_') + option
     } for argument in unused if argument.type.settings.get('help') != '==SUPPRESS==' for option in argument.options_list ]
 
 def get_parameter_value_completions(command_table, query, verbose=False):
@@ -326,7 +327,9 @@ def get_global_parameter_name_completions(query):
     return [ {
         'name': option,
         'kind': 'argument_name',
-        'documentation': argument.get('help')
+        'detail': 'global',
+        'documentation': argument.get('help'),
+        'sortText': '30_' + option
     } for argument in unused for option in argument['options'] ]
 
 def get_global_parameter_value_list(query, verbose=False):
@@ -405,6 +408,9 @@ def get_hover_text(group_index, command_table, command):
 
 def is_required(argument):
     return hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True and argument.name != 'is_linux'
+
+def has_default(argument):
+    return argument.type.settings.get('default') is not None or hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and not not find_default(argument.type.default_name_tooling)
 
 def get_short_summary(subcommand, fallback):
     if subcommand in helps:

@@ -19,6 +19,7 @@ export interface Completion {
     detail?: string;
     documentation?: string;
     snippet?: string;
+    sortText?: string;
 }
 
 export type Arguments = Record<string, string | null>;

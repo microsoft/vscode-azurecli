@@ -58,7 +58,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
         return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {})
-            .then(completions => completions.map(({ name, kind, detail, documentation, snippet }) => {
+            .then(completions => completions.map(({ name, kind, detail, documentation, snippet, sortText }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
                 if (snippet) {
                     item.insertText = new SnippetString(snippet);
@@ -70,6 +70,9 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                 }
                 if (documentation) {
                     item.documentation = documentation;
+                }
+                if (sortText) {
+                    item.sortText = sortText;
                 }
                 item.commitCharacters = [' '];
                 return item;
