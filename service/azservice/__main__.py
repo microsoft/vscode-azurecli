@@ -371,6 +371,10 @@ def get_hover_text(group_index, command_table, command):
             req = is_required(argument)
             return { 'paragraphs': [ '`' + ' '.join(argument.options_list) + '`' + ('*' if req else '') + ': ' + argument.type.settings.get('help')
                  + ('\n\n*Required' if req else '') ] }
+        argument = next((argument for argument in GLOBAL_ARGUMENTS.values() if argument_name in argument['options']), None)
+        if argument:
+            return { 'paragraphs': [ '`' + ' '.join(argument['options']) + '`: ' + argument['help'] ] }
+        return
 
     if subcommand in helps:
         help = yaml.load(helps[subcommand])
@@ -397,6 +401,7 @@ def get_hover_text(group_index, command_table, command):
                 paragraphs.append('Examples\n\n' + '\n\n'.join([ '{0}\n```azcli\n{1}\n```'.format(example['name'].strip(), example['text'].strip())
                     for example in examples ]))
             return { 'paragraphs': paragraphs }
+        return
 
 def is_required(argument):
     return hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True and argument.name != 'is_linux'
