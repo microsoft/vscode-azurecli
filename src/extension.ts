@@ -74,7 +74,6 @@ class AzCompletionItemProvider implements CompletionItemProvider {
                 if (sortText) {
                     item.sortText = sortText;
                 }
-                item.commitCharacters = [' '];
                 return item;
             }));
     }
