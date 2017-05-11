@@ -5,25 +5,11 @@
 # --------------------------------------------------------------------------------------------
 from __future__ import print_function
 
-import os
-import traceback
-from importlib import import_module
 from sys import stdin, stdout, stderr
 import json
-import pkgutil
-import yaml
 import time
 
-from six.moves import configparser
-
-from azure.cli.core.application import APPLICATION, Configuration
-from azure.cli.core.commands import _update_command_definitions, BLACKLISTED_MODS
-from azure.cli.core._profile import _SUBSCRIPTION_NAME, Profile
-from azure.cli.core._session import ACCOUNT
-from azure.cli.core._environment import get_config_dir as cli_config_dir
-from azure.cli.core._config import az_config, GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
-from azure.cli.core.help_files import helps
-from azure.cli.core.util import CLIError
+from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -35,58 +21,6 @@ AZ_COMPLETION = {
     'kind': 'command',
     'documentation': 'Microsoft command-line tools for Azure.'
 }
-
-GLOBAL_ARGUMENTS = {
-    'verbose': {
-        'options': ['--verbose'],
-        'help': 'Increase logging verbosity. Use --debug for full debug logs.'
-    },
-    'debug': {
-        'options': ['--debug'],
-        'help': 'Increase logging verbosity to show all debug logs.'
-    },
-    'output': {
-        'options': ['--output', '-o'],
-        'help': 'Output format',
-        'choices': ['json', 'tsv', 'table', 'jsonc']
-    },
-    'help': {
-        'options': ['--help', '-h'],
-        'help': 'Get more information about a command'
-    },
-    'query': {
-        'options': ['--query'],
-        'help': 'JMESPath query string. See http://jmespath.org/ for more information and examples.'
-    }
-}
-
-def load_command_table():
-    APPLICATION.initialize(Configuration())
-    command_table = APPLICATION.configuration.get_command_table()
-    install_modules(command_table)
-    return command_table
-
-def install_modules(command_table):
-    for cmd in command_table:
-        command_table[cmd].load_arguments()
-
-    try:
-        mods_ns_pkg = import_module('azure.cli.command_modules')
-        installed_command_modules = [modname for _, modname, _ in
-                                     pkgutil.iter_modules(mods_ns_pkg.__path__)
-                                     if modname not in BLACKLISTED_MODS]
-    except ImportError:
-        pass
-    for mod in installed_command_modules:
-        try:
-            mod = import_module('azure.cli.command_modules.' + mod)
-            mod.load_params(mod)
-            mod.load_commands()
-
-        except Exception:  # pylint: disable=broad-except
-            print("Error loading: {}".format(mod), file=stderr)
-            traceback.print_exc(file=stderr)
-    _update_command_definitions(command_table)
 
 def get_group_index(command_table):
     index = { '': [], '-': [] }
@@ -103,8 +37,9 @@ def get_group_index(command_table):
                     'kind': 'group',
                     'detail': group
                 }
-                if group in helps:
-                    description = yaml.load(helps[group]).get('short-summary')
+                help = get_help(group)
+                if help:
+                    description = help.get('short-summary')
                     if description:
                         completion['documentation'] = description
 
@@ -161,8 +96,8 @@ def get_snippets(command_table):
     return snippets
 
 def add_command_documentation(completion, command):
-    if command.name in helps:
-        help = yaml.load(helps[command.name])
+    help = get_help(command.name)
+    if help:
         short_summary = help.get('short-summary')
         if short_summary:
             completion['documentation'] = short_summary
@@ -173,13 +108,6 @@ def add_command_documentation(completion, command):
             if examples:
                 for example in examples:
                     completion['documentation'] += '\n\n' + example['name'].strip() + '\n' + example['text'].strip()
-
-def load_profile():
-    azure_folder = cli_config_dir()
-    if not os.path.exists(azure_folder):
-        os.makedirs(azure_folder)
-
-    ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
 
 def get_completions(group_index, command_table, snippets, query, verbose=False):
     if 'argument' in query:
@@ -236,18 +164,19 @@ def get_argument_name_completions(command_table, query):
     command_name = query['subcommand']
     command = command_table[command_name]
     arguments = query['arguments']
-    unused = [ argument for argument in command.arguments.values()
-        if not [ option for option in argument.options_list if option in arguments ] ]
-    reload_config()
+    unused = { name: argument for name, argument in command.arguments.items()
+        if not [ option for option in argument.options_list if option in arguments ]
+            and argument.type.settings.get('help') != '==SUPPRESS==' }
+    defaults = get_defaults(unused)
     return [ {
         'name': option,
         'kind': 'argument_name',
         'required': is_required(argument),
-        'default': has_default(argument),
-        'detail': 'required' if is_required(argument) and not has_default(argument) else None,
+        'default': not not defaults[name],
+        'detail': 'required' if is_required(argument) and not defaults[name] else None,
         'documentation': argument.type.settings.get('help'),
-        'sortText': ('10_' if is_required(argument) and not has_default(argument) else '20_') + option
-    } for argument in unused if argument.type.settings.get('help') != '==SUPPRESS==' for option in argument.options_list ]
+        'sortText': ('10_' if is_required(argument) and not defaults[name] else '20_') + option
+    } for name, argument in unused.items() for option in argument.options_list ]
 
 def get_argument_value_completions(command_table, query, verbose=False):
     list = get_argument_value_list(command_table, query, verbose) + \
@@ -268,57 +197,20 @@ def get_argument_value_list(command_table, query, verbose=False):
             if argument.choices:
                 return argument.choices
             if argument.completer:
-                try:
-                    args = get_parsed_args(command, query['arguments'])
-                    add_defaults(command, args)
-                    return argument.completer('', '', args)
-                except TypeError:
-                    try:
-                        return argument.completer('')
-                    except TypeError:
-                        try:
-                            return argument.completer()
-                        except TypeError:
-                            if verbose: print('Completer not run ({} {})'.format(command_name, argument_name), file=stderr)
+                values = run_argument_value_completer(command, argument, query['arguments'])
+                if values is not None:
+                    return values
+                if verbose: print('Completer not run ({} {})'.format(command_name, argument_name), file=stderr)
             elif verbose: print('Completions not found ({} {})'.format(command_name, argument_name), file=stderr)
         elif verbose and not [ a for a in GLOBAL_ARGUMENTS.values() if argument_name in a['options'] ]: print('Argument not found ({} {})'.format(command_name, argument_name), file=stderr)
     elif verbose: print('Command not found ({})'.format(command_name), file=stderr)
     return []
-
-def get_parsed_args(command, arguments):
-    result = lambda: None
-    for argument_name, value in arguments.items():
-        name, _ = get_argument(command, argument_name)
-        setattr(result, name, value)
-    return result
 
 def get_argument(command, argument_name):
     for name, argument in command.arguments.items():
         if argument_name in argument.options_list:
             return name, argument
     return None, None
-
-def add_defaults(command, arguments):
-    reloaded = False
-    for name, argument in command.arguments.items():
-        if not hasattr(arguments, name) and hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling:
-            if not reloaded:
-                reload_config()
-                reloaded = True
-            default = find_default(argument.type.default_name_tooling)
-            if default:
-                setattr(arguments, name, default)
-
-    return arguments
-
-def reload_config():
-    az_config.config_parser.read(GLOBAL_CONFIG_PATH)
-
-def find_default(default_name):
-    try:
-        return az_config.get(DEFAULTS_SECTION, default_name, None)
-    except configparser.NoSectionError:
-        return None
 
 def get_global_argument_name_completions(query):
     arguments = query['arguments']
@@ -341,29 +233,19 @@ def get_global_argument_value_list(query, verbose=False):
         elif verbose: print('Completions not found ({})'.format(argument_name), file=stderr)
     return []
 
-PROFILE = Profile()
-
 def get_status():
-    load_profile()
-    try:
-        subscription = PROFILE.get_subscription()[_SUBSCRIPTION_NAME]
-        defaults = get_defaults_status()
-        return { 'message': 'Subscription: {0}{1}'.format(subscription, defaults) }
-    except CLIError:
+    subscription = get_current_subscription()
+    if not subscription:
         return { 'message': 'Not logged in' }
+    defaults = get_defaults_status()
+    return { 'message': 'Subscription: {0}{1}'.format(subscription, defaults) }
 
 def get_defaults_status():
-    reload_config()
-    try:
-        options = az_config.config_parser.options(DEFAULTS_SECTION)
-        defaults_status = ''
-        for opt in options:
-            value = az_config.get(DEFAULTS_SECTION, opt)
-            if value:
-                defaults_status += ', ' + opt.capitalize() + ': ' + az_config.get(DEFAULTS_SECTION, opt)
-        return defaults_status
-    except configparser.NoSectionError:
-        return ''
+    defaults = get_configured_defaults()
+    defaults_status = ''
+    for name, value in defaults.items():
+        defaults_status += ', ' + name.capitalize() + ': ' + value
+    return defaults_status
 
 def get_hover_text(group_index, command_table, command):
     subcommand = command['subcommand']
@@ -379,8 +261,8 @@ def get_hover_text(group_index, command_table, command):
             return { 'paragraphs': [ '`' + ' '.join(argument['options']) + '`: ' + argument['help'] ] }
         return
 
-    if subcommand in helps:
-        help = yaml.load(helps[subcommand])
+    help = get_help(subcommand)
+    if help:
         short_summary = help.get('short-summary')
         if short_summary:
             paragraphs = [ '{1}\n\n`{0}`\n\n{2}'.format(subcommand, short_summary, help.get('long-summary', '')).strip() ]
@@ -406,23 +288,17 @@ def get_hover_text(group_index, command_table, command):
             return { 'paragraphs': paragraphs }
         return
 
-def is_required(argument):
-    return hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True and argument.name != 'is_linux'
-
-def has_default(argument):
-    return argument.type.settings.get('default') is not None or hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling and not not find_default(argument.type.default_name_tooling)
-
 def get_short_summary(subcommand, fallback):
-    if subcommand in helps:
-        help = yaml.load(helps[subcommand])
+    help = get_help(subcommand)
+    if help:
         return help.get('short-summary', fallback)
     return fallback
 
 def main():
     timings = False
     start = time.time()
-    load_profile()
-    if timings: print('load_profile {} s'.format(time.time() - start), file=stderr)
+    initialize()
+    if timings: print('initialize {} s'.format(time.time() - start), file=stderr)
 
     start = time.time()
     command_table = load_command_table()
