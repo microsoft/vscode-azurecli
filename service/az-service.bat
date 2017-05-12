@@ -2,6 +2,6 @@
 setlocal
 
 SET PYTHONPATH=%~dp0;%PYTHONPATH%
-"%1" -m azservice %*
+%1 -m azservice %*
 
 endlocal
