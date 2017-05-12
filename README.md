@@ -14,6 +14,13 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.1.0
+
+- Improve argument sort order in IntelliSense.
+- Fix handling of spaces in az's path on Windows. Did not work with MSI install.
+- Fix version check for older versions. Should show a message asking to update az.
+- Smaller bugfixes.
+
 ### 0.0.1
 
 Initial release.
