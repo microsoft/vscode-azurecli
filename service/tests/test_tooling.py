@@ -79,6 +79,11 @@ class ToolingTest(unittest.TestCase):
         self.assertTrue(is_required(command.arguments.get(TEST_ARGUMENT)))
         self.assertFalse(is_required(command.arguments.get(TEST_OPTIONAL_ARGUMENT)))
 
+    def test_is_linux_optional(self):
+        command = self.command_table.get('appservice plan create')
+        self.assertIsNotNone(command)
+        self.assertFalse(is_required(command.arguments.get('is_linux')))
+
     def test_argument_defaults(self):
         command = self.command_table.get(TEST_COMMAND)
         self.assertIsNotNone(command)
