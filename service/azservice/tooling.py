@@ -56,7 +56,7 @@ def _load_profile():
         os.makedirs(azure_folder)
 
     ACCOUNT.load(os.path.join(azure_folder, 'azureProfile.json'))
-    
+
 def load_command_table():
     APPLICATION.initialize(Configuration())
     command_table = APPLICATION.configuration.get_command_table()
@@ -113,12 +113,13 @@ def get_configured_defaults():
         return {}
 
 def is_required(argument):
-    return hasattr(argument.type, 'required_tooling') and argument.type.required_tooling == True and argument.name != 'is_linux'
+    required_tooling = hasattr(argument.type, 'required_tooling') and argument.type.required_tooling is True
+    return required_tooling and argument.name != 'is_linux'
 
 def get_defaults(arguments):
     _reload_config()
-    return { name: _get_default(argument) for name, argument in arguments.items() }
-    
+    return {name: _get_default(argument) for name, argument in arguments.items()}
+
 def _get_default(argument):
     configured = _find_configured_default(argument)
     return configured or argument.type.settings.get('default')
