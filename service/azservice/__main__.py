@@ -172,10 +172,10 @@ def get_argument_name_completions(command_table, query):
         'name': option,
         'kind': 'argument_name',
         'required': is_required(argument),
-        'default': not not defaults[name],
-        'detail': 'required' if is_required(argument) and not defaults[name] else None,
+        'default': not not defaults.get(name),
+        'detail': 'required' if is_required(argument) and not defaults.get(name) else None,
         'documentation': argument.type.settings.get('help'),
-        'sortText': ('10_' if is_required(argument) and not defaults[name] else '20_') + option
+        'sortText': ('10_' if is_required(argument) and not defaults.get(name) else '20_') + option
     } for name, argument in unused.items() for option in argument.options_list ]
 
 def get_argument_value_completions(command_table, query, verbose=False):
