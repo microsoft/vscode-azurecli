@@ -64,19 +64,19 @@
         "command": "ms-azurecli.runLineInTerminal",
         "key": "ctrl+'",
         "mac": "cmd+'",
-        "when": "editorTextFocus && resourceLangId == 'azcli'"
+        "when": "editorTextFocus && editorLangId == 'azcli'"
       },
       {
         "command": "ms-azurecli.runLineInEditor",
         "key": "ctrl+shift+'",
         "mac": "cmd+shift+'",
-        "when": "editorTextFocus && resourceLangId == 'azcli'"
+        "when": "editorTextFocus && editorLangId == 'azcli'"
       },
       {
         "command": "ms-azurecli.toggleLiveQuery",
         "key": "ctrl+;",
         "mac": "cmd+;",
-        "when": "editorTextFocus && resourceLangId == 'azcli'"
+        "when": "editorTextFocus && editorLangId == 'azcli'"
       }
     ],
     "menus": {
@@ -84,12 +84,12 @@
         {
           "command": "ms-azurecli.runLineInTerminal",
           "group": "2_run",
-          "when": "resourceLangId == 'azcli'"
+          "when": "editorLangId == 'azcli'"
         },
         {
           "command": "ms-azurecli.runLineInEditor",
           "group": "2_run",
-          "when": "resourceLangId == 'azcli'"
+          "when": "editorLangId == 'azcli'"
         }
       ]
     }
