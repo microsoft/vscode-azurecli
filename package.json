@@ -18,7 +18,8 @@
   },
   "categories": [
     "Languages",
-    "Snippets"
+    "Snippets",
+    "Azure"
   ],
   "activationEvents": [
     "onLanguage:azcli"
