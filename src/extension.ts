@@ -19,6 +19,8 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(status);
     context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
+    context.subscriptions.push(commands.registerCommand('ms-azurecli.installAzureCLI', installAzureCLI));
+
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -311,13 +313,11 @@ function replaceContent(editor: TextEditor, content: string) {
 }
 
 async function azNotFound(wrongVersion: boolean): Promise<void> {
-    const message = wrongVersion ? '\'az\' >= 2.0.5 required, update your installation.' : '\'az\' not found on PATH, make sure it is installed.';
+    const message = wrongVersion ? '\'az\' >= 2.0.5 required, please update your installation.' : '\'az\' not found on PATH, please make sure it is installed.';
     const result = await window.showInformationMessage<any>(message,
         {
             title: 'Documentation',
-            run: () => {
-                opn('https://aka.ms/GetTheAzureCLI');
-            }
+            run: installAzureCLI
         },
         {
             title: 'Close',
@@ -327,6 +327,10 @@ async function azNotFound(wrongVersion: boolean): Promise<void> {
     if (result && result.run) {
         result.run();
     }
+}
+
+function installAzureCLI() {
+    opn('https://aka.ms/GetTheAzureCLI');
 }
 
 export function deactivate() {
