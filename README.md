@@ -14,6 +14,11 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.2.0
+
+- Add 'Azure' marketplace category.
+- Fix [failure when running commands in the Terminal](https://github.com/Microsoft/vscode-azurecli/issues/16).
+
 ### 0.1.0
 
 - Improve argument sort order in IntelliSense.
