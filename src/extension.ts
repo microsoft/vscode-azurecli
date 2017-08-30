@@ -313,13 +313,11 @@ function replaceContent(editor: TextEditor, content: string) {
 }
 
 async function azNotFound(wrongVersion: boolean): Promise<void> {
-    const message = wrongVersion ? '\'az\' >= 2.0.5 required, update your installation.' : '\'az\' not found on PATH, make sure it is installed.';
+    const message = wrongVersion ? '\'az\' >= 2.0.5 required, please update your installation.' : '\'az\' not found on PATH, please make sure it is installed.';
     const result = await window.showInformationMessage<any>(message,
         {
             title: 'Documentation',
-            run: () => {
-                opn('https://aka.ms/GetTheAzureCLI');
-            }
+            run: installAzureCLI
         },
         {
             title: 'Close',
