@@ -22,7 +22,8 @@
     "Azure"
   ],
   "activationEvents": [
-    "onLanguage:azcli"
+    "onLanguage:azcli",
+    "onCommand:ms-azurecli.installAzureCLI"
   ],
   "main": "./out/src/extension",
   "contributes": {
@@ -98,6 +99,20 @@
         {
           "command": "ms-azurecli.runLineInEditor",
           "group": "2_run",
+          "when": "editorLangId == 'azcli'"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ms-azurecli.runLineInTerminal",
+          "when": "editorLangId == 'azcli'"
+        },
+        {
+          "command": "ms-azurecli.runLineInEditor",
+          "when": "editorLangId == 'azcli'"
+        },
+        {
+          "command": "ms-azurecli.toggleLiveQuery",
           "when": "editorLangId == 'azcli'"
         }
       ]
