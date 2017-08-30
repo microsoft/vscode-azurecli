@@ -19,6 +19,8 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(status);
     context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
+    context.subscriptions.push(commands.registerCommand('ms-azurecli.installAzureCLI', installAzureCLI));
+
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -327,6 +329,10 @@ async function azNotFound(wrongVersion: boolean): Promise<void> {
     if (result && result.run) {
         result.run();
     }
+}
+
+function installAzureCLI() {
+    opn('https://aka.ms/GetTheAzureCLI');
 }
 
 export function deactivate() {

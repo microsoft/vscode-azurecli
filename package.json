@@ -48,16 +48,24 @@
     ],
     "commands": [
       {
+        "category": "Azure CLI",
         "command": "ms-azurecli.runLineInTerminal",
         "title": "Run Line in Terminal"
       },
       {
+        "category": "Azure CLI",
         "command": "ms-azurecli.runLineInEditor",
         "title": "Run Line in Editor"
       },
       {
+        "category": "Azure CLI",
         "command": "ms-azurecli.toggleLiveQuery",
         "title": "Toggle Live Query"
+      },
+      {
+        "category": "Azure CLI",
+        "command": "ms-azurecli.installAzureCLI",
+        "title": "Install the Azure CLI"
       }
     ],
     "keybindings": [
