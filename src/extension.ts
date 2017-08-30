@@ -138,7 +138,7 @@ class RunLineInTerminal {
     }
 
     private run(editor: TextEditor) {
-        return commands.executeCommand('workbench.action.terminal.runSelectedText', editor);
+        return commands.executeCommand('workbench.action.terminal.runSelectedText');
     }
 
     dispose() {
