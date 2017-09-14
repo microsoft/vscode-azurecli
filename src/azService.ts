@@ -72,9 +72,9 @@ export class AzService {
             });
     }
 
-    async getCompletions(query: CompletionQuery): Promise<Completion[]> {
+    async getCompletions(query: CompletionQuery, onCancel: (handle: () => void) => void): Promise<Completion[]> {
         try {
-            return this.send<CompletionQuery, Completion[]>(query);
+            return this.send<CompletionQuery, Completion[]>(query, onCancel);
         } catch (err) {
             console.error(err);
             return [];
@@ -85,16 +85,19 @@ export class AzService {
         return this.send<StatusQuery, Status>({ request: 'status' });
     }
 
-    async getHover(command: Command): Promise<HoverText> {
+    async getHover(command: Command, onCancel: (handle: () => void) => void): Promise<HoverText> {
         return this.send<HoverQuery, HoverText>({
             request: 'hover',
             command
-        });
+        }, onCancel);
     }
 
-    private async send<T, R>(data: T): Promise<R> {
+    private async send<T, R>(data: T, onCancel?: (handle: () => void) => void): Promise<R> {
         const process = await this.getProcess();
         return new Promise<R>((resolve, reject) => {
+            if (onCancel) {
+                onCancel(() => reject('canceled'));
+            }
             const sequence = this.nextSequenceNumber++;
             this.listeners[sequence] = response => {
                 try {

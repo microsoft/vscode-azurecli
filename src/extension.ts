@@ -59,7 +59,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const argument = (/\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor) || [])[1];
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
-        return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {})
+        return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {}, token.onCancellationRequested)
             .then(completions => completions.map(({ name, kind, detail, documentation, snippet, sortText }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
                 if (snippet) {
@@ -117,13 +117,13 @@ class AzHoverProvider implements HoverProvider {
                     if (i > 0) {
                         const subcommand = list.slice(1, i + 1)
                             .map(node => node.text).join(' ');
-                        return this.azService.getHover({ subcommand })
+                        return this.azService.getHover({ subcommand }, token.onCancellationRequested)
                             .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
                     }
                 } else if (node.kind === 'argument_name') {
                     const subcommand = command.subcommand.slice(1)
                         .map(node => node.text).join(' ');
-                    return this.azService.getHover({ subcommand, argument: node.text })
+                    return this.azService.getHover({ subcommand, argument: node.text }, token.onCancellationRequested)
                         .then(text => text && new Hover(text.paragraphs, new Range(position.line, node.offset, position.line, node.offset + node.length)));
                 }
             }
