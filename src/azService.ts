@@ -61,7 +61,7 @@ export class AzService {
 
     private process: Promise<ChildProcess> | undefined;
     private data = '';
-    private listeners: { [sequence: number]: ((response: Message<any>) => void); } = {};
+    private listeners: { [sequence: number]: ((err: undefined | any, response: Message<any> | undefined) => void); } = {};
     private nextSequenceNumber = 1;
 
     constructor(azNotFound: (wrongVersion: boolean) => void) {
@@ -99,11 +99,15 @@ export class AzService {
                 onCancel(() => reject('canceled'));
             }
             const sequence = this.nextSequenceNumber++;
-            this.listeners[sequence] = response => {
-                try {
-                    resolve(response.data);
-                } catch (err) {
+            this.listeners[sequence] = (err, response) => {
+                if (err) {
                     reject(err);
+                } else {
+                    try {
+                        resolve(response!.data);
+                    } catch (err) {
+                        reject(err);
+                    }
                 }
             };
             const request: Message<T> = { sequence, data };
@@ -148,7 +152,7 @@ export class AzService {
                 const listener = this.listeners[response.sequence];
                 if (listener) {
                     delete this.listeners[response.sequence];
-                    listener(response);
+                    listener(undefined, response);
                 }
             }
         });
@@ -162,6 +166,11 @@ export class AzService {
         process.on('exit', (code, signal) => {
             console.error(`Exit code ${code}, signal ${signal}`);
             this.process = undefined;
+            for (const sequence in this.listeners) {
+                const listener = this.listeners[sequence];
+                delete this.listeners[sequence];
+                listener(`Python process terminated with exit code ${code}, signal ${signal}.`, undefined);
+            }
         });
         return process;
     }
