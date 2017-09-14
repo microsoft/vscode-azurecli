@@ -314,23 +314,26 @@ def main():
 
     while True:
         line = stdin.readline()
+        start = time.time()
         request = json.loads(line)
         response_data = None
         if request['data'].get('request') == 'status':
             response_data = get_status()
+            if timings: print('get_status {} s'.format(time.time() - start), file=stderr)
         elif request['data'].get('request') == 'hover':
-            start = time.time()
             response_data = get_hover_text(group_index, command_table, request['data']['command'])
             if timings: print('get_hover_text {} s'.format(time.time() - start), file=stderr)
         else:
             response_data = get_completions(group_index, command_table, snippets, request['data'], True)
+            if timings: print('get_completions {} s'.format(time.time() - start), file=stderr)
         response = {
             'sequence': request['sequence'],
             'data': response_data
         }
         output = json.dumps(response)
-        print(output)
+        stdout.write(output + '\n')
         stdout.flush()
+        stderr.flush()
 
 main()
 
