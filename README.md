@@ -14,6 +14,11 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.3.0
+
+- Fix [delayed completion proposals on Windows](https://github.com/Microsoft/vscode-azurecli/issues/19).
+- Fix [completion proposals hang when az crashes](https://github.com/Microsoft/vscode-azurecli/issues/20).
+
 ### 0.2.0
 
 - Add 'Azure' marketplace category.
