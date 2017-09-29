@@ -35,6 +35,10 @@ Create `.azcli` files and use these features:
 
 Initial release.
 
+## Known Issues
+
+On OSX the extension currently does not work with the Homebrew install of the Azure CLI. This can be worked around by installing the Azure CLI through the install script (see https://aka.ms/GetTheAzureCLI).
+
 ## Contributing
 
 File bugs and feature requests in [GitHub Issues](https://github.com/Microsoft/vscode-azurecli/issues).
