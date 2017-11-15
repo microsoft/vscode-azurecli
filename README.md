@@ -12,6 +12,10 @@ Create `.azcli` files and use these features:
 
 ![Azure CLI Tools in Action](images/in_action.gif)
 
+## Known Issues
+
+On OSX the extension currently does not work with the Homebrew install of the Azure CLI. This can be worked around by installing the Azure CLI through the install script (see https://aka.ms/GetTheAzureCLI).
+
 ## Release Notes
 
 ### 0.3.0
@@ -34,10 +38,6 @@ Create `.azcli` files and use these features:
 ### 0.0.1
 
 Initial release.
-
-## Known Issues
-
-On OSX the extension currently does not work with the Homebrew install of the Azure CLI. This can be worked around by installing the Azure CLI through the install script (see https://aka.ms/GetTheAzureCLI).
 
 ## Contributing
 
