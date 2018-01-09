@@ -18,6 +18,10 @@ On OSX the extension currently does not work with the Homebrew install of the Az
 
 ## Release Notes
 
+### 0.4.0
+
+- Support for Azure CLI >=2.0.24
+
 ### 0.3.0
 
 - Fix [delayed completion proposals on Windows](https://github.com/Microsoft/vscode-azurecli/issues/19).

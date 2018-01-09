@@ -2,7 +2,7 @@
   "name": "azurecli",
   "displayName": "Azure CLI Tools",
   "description": "Tools for developing and running commands of the Azure CLI.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "icon": "images/azure_icon.png",
   "publisher": "ms-vscode",
   "repository": {
