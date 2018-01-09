@@ -7,7 +7,7 @@
 import unittest
 import collections
 
-from azservice.tooling import initialize, load_command_table, get_help, is_required, GLOBAL_ARGUMENTS, get_defaults, run_argument_value_completer, get_current_subscription, get_configured_defaults
+from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer
 
 TEST_GROUP = 'webapp'
 TEST_COMMAND = 'webapp create'

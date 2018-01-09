@@ -14,4 +14,7 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 export PYTHONPATH="${DIR}:${PYTHONPATH}"
 
-"${1:-$HOME/lib/azure-cli/bin/python}" -m unittest discover -s tests "$@"
+PYTHON="${1:-$HOME/lib/azure-cli/bin/python}"
+shift
+
+"$PYTHON" -m unittest discover -s tests "$@"

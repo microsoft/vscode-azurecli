@@ -269,7 +269,7 @@ def get_hover_text(group_index, command_table, command):
             if subcommand in command_table:
                 list = sorted([ argument for argument in command_table[subcommand].arguments.values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + e.options_list[0])
                 if list:
-                    paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(argument.options_list) + '`' + ('*' if is_required(argument) else '') + ': ' + argument.type.settings.get('help')
+                    paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(argument.options_list) + '`' + ('*' if is_required(argument) else '') + ': ' + (argument.type.settings.get('help') or '')
                         for argument in list ]) + ('\n\n*Required' if is_required(list[0]) else ''))
                 paragraphs.append('Global Arguments\n' + '\n'.join([ '- `' + ' '.join(argument['options']) + '`: ' + argument['help']
                     for argument in GLOBAL_ARGUMENTS.values() ]))
@@ -349,8 +349,9 @@ main()
 # {"sequence":4,"data":{"subcommand":"webapp browse","arguments":{"--resource-group":null}}}
 # {"sequence":4,"data":{"subcommand":"webapp browse","arguments":{"--output":"table"}}}
 # {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--resource-group","arguments":{}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"-g","arguments":{}}}
 # {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--name","arguments":{}}}
-# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--name","arguments":{"-g":"chrmarti-test"}}}
+# {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--name","arguments":{"-g":"chrmarti-group"}}}
 # {"sequence":4,"data":{"subcommand":"webapp browse","argument":"--output","arguments":{}}}
 # {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice"}}}
 # {"sequence":4,"data":{"request":"hover","command":{"subcommand":"appservice something"}}}
