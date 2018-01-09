@@ -8,8 +8,13 @@ from __future__ import print_function
 from sys import stdin, stdout, stderr
 import json
 import time
+from threading  import Thread
+try:
+    from Queue import Queue, Empty
+except ImportError:
+    from queue import Queue, Empty # python 3.x
 
-from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments
+from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments, load_arguments, arguments_loaded
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -126,7 +131,7 @@ def get_completions(group_index, command_table, snippets, query, verbose=False):
 def get_snippet_completions(command_table, snippets):
     return [
         with_snippet(command_table, snippet['subcommand'], 'az ' + snippet['subcommand'], snippet['completion'])
-        for snippet in snippets
+        for snippet in snippets if arguments_loaded(snippet['subcommand'])
     ]
 
 def get_command_completions(group_index, command_table, command_name):
@@ -312,8 +317,28 @@ def main():
     snippets = get_snippets(command_table) if AUTOMATIC_SNIPPETS_ENABLED else []
     if timings: print('get_snippets {} s'.format(time.time() - start), file=stderr)
 
+    def enqueue_output(input, queue):
+        for line in iter(input.readline, b''):
+            queue.put(line)
+
+    queue = Queue()
+    thread = Thread(target=enqueue_output, args=(stdin, queue))
+    thread.daemon = True
+    thread.start()
+
+    bkg_start = time.time()
+    keep_loading = True
     while True:
-        line = stdin.readline()
+
+        if keep_loading:
+            keep_loading = load_arguments(command_table, 10)
+            if not keep_loading and timings: print('load_arguments {} s'.format(time.time() - bkg_start), file=stderr)
+
+        try:
+            line = queue.get_nowait() if keep_loading else queue.get()
+        except Empty:
+            continue
+        
         start = time.time()
         request = json.loads(line)
         response_data = None

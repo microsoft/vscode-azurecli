@@ -72,6 +72,14 @@ def get_arguments(command):
     return command.arguments
 
 
+def arguments_loaded(command_name):
+    return True
+
+
+def load_arguments(cmd_table, batch):
+    return False
+
+
 def _install_modules(command_table):
     for cmd in command_table:
         command_table[cmd].load_arguments()

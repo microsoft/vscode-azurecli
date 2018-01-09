@@ -62,6 +62,21 @@ def get_arguments(command):
     return command.arguments
 
 
+def arguments_loaded(command_name):
+    return ARGUMENTS_LOADED.get(command_name, False)
+
+
+def load_arguments(cmd_table, batch):
+    for command in cmd_table:
+        if not ARGUMENTS_LOADED.get(command):
+            ARGUMENTS_LOADED[command] = True
+            cli_ctx.invocation.commands_loader.load_arguments(command)
+            batch = batch - 1
+            if batch == 0:
+                return True
+    return False
+
+
 HELP_CACHE = {}
 
 
