@@ -51,10 +51,15 @@ def initialize():
 def load_command_table():
     invoker = cli_ctx.invocation_cls(cli_ctx=cli_ctx, commands_loader_cls=cli_ctx.commands_loader_cls, parser_cls=cli_ctx.parser_cls, help_cls=cli_ctx.help_cls)
     cli_ctx.invocation = invoker
-    cmd_table = invoker.commands_loader.load_command_table(None)
-    for command in cmd_table:
-        invoker.commands_loader.load_arguments(command)
-    return cmd_table
+    return invoker.commands_loader.load_command_table(None)
+
+
+ARGUMENTS_LOADED = {}
+def get_arguments(command):
+    if not ARGUMENTS_LOADED.get(command.name):
+        ARGUMENTS_LOADED[command.name] = True
+        cli_ctx.invocation.commands_loader.load_arguments(command.name)
+    return command.arguments
 
 
 HELP_CACHE = {}
@@ -130,7 +135,7 @@ def _to_argument_object(command, cli_arguments):
 
 
 def _find_argument(command, argument_name):
-    for name, argument in command.arguments.items():
+    for name, argument in get_arguments(command).items():
         if argument_name in argument.options_list:
             return name, argument
     return None, None
@@ -138,7 +143,7 @@ def _find_argument(command, argument_name):
 
 def _add_defaults(command, arguments):
     _reload_config()
-    for name, argument in command.arguments.items():
+    for name, argument in get_arguments(command).items():
         if not hasattr(arguments, name):
             default = _find_configured_default(argument)
             if default:

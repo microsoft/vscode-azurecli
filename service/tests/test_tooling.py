@@ -7,7 +7,7 @@
 import unittest
 import collections
 
-from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer
+from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments
 
 TEST_GROUP = 'webapp'
 TEST_COMMAND = 'webapp create'
@@ -56,14 +56,14 @@ class ToolingTest(unittest.TestCase):
     def test_argument(self):
         command = self.command_table.get(TEST_COMMAND)
         self.assertIsNotNone(command)
-        argument = command.arguments.get(TEST_ARGUMENT)
+        argument = get_arguments(command).get(TEST_ARGUMENT)
         self.assertIsNotNone(argument)
         self.assertSequenceEqual(TEST_ARGUMENT_OPTIONS, argument.options_list)
 
     def test_argument_help(self):
         command = self.command_table.get(TEST_COMMAND)
         self.assertIsNotNone(command)
-        argument = command.arguments.get(TEST_ARGUMENT)
+        argument = get_arguments(command).get(TEST_ARGUMENT)
         self.assertIsNotNone(argument)
         self.assertTrue(argument.type.settings.get('help'))
 
@@ -77,18 +77,18 @@ class ToolingTest(unittest.TestCase):
     def test_required_argument(self):
         command = self.command_table.get(TEST_COMMAND)
         self.assertIsNotNone(command)
-        self.assertTrue(is_required(command.arguments.get(TEST_ARGUMENT)))
-        self.assertFalse(is_required(command.arguments.get(TEST_OPTIONAL_ARGUMENT)))
+        self.assertTrue(is_required(get_arguments(command).get(TEST_ARGUMENT)))
+        self.assertFalse(is_required(get_arguments(command).get(TEST_OPTIONAL_ARGUMENT)))
 
     def test_is_linux_optional(self):
         command = self.command_table.get('appservice plan create')
         self.assertIsNotNone(command)
-        self.assertFalse(is_required(command.arguments.get('is_linux')))
+        self.assertFalse(is_required(get_arguments(command).get('is_linux')))
 
     def test_argument_defaults(self):
         command = self.command_table.get(TEST_COMMAND)
         self.assertIsNotNone(command)
-        defaults = get_defaults(command.arguments)
+        defaults = get_defaults(get_arguments(command))
         self.assertIsNotNone(defaults)
         self.assertTrue(defaults.get(TEST_ARGUMENT_WITH_DEFAULT))
         self.assertFalse(defaults.get(TEST_ARGUMENT_WITHOUT_DEFAULT))
@@ -96,7 +96,7 @@ class ToolingTest(unittest.TestCase):
     def test_argument_choices(self):
         command = self.command_table.get(TEST_COMMAND_WITH_CHOICES)
         self.assertIsNotNone(command)
-        argument = command.arguments[TEST_ARGUMENT_WITH_CHOICES]
+        argument = get_arguments(command)[TEST_ARGUMENT_WITH_CHOICES]
         self.assertIsNotNone(argument)
         self.assertIsNotNone(argument.choices)
         self.assertIsNone(argument.completer)
@@ -105,7 +105,7 @@ class ToolingTest(unittest.TestCase):
     def test_argument_completer(self):
         command = self.command_table.get(TEST_COMMAND_WITH_COMPLETER)
         self.assertIsNotNone(command)
-        argument = command.arguments[TEST_ARGUMENT_WITH_COMPLETER]
+        argument = get_arguments(command)[TEST_ARGUMENT_WITH_COMPLETER]
         self.assertIsNotNone(argument)
         self.assertIsNone(argument.choices)
         self.assertIsNotNone(argument.completer)

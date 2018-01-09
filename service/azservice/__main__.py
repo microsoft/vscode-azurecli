@@ -9,7 +9,7 @@ from sys import stdin, stdout, stderr
 import json
 import time
 
-from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer
+from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -164,7 +164,7 @@ def get_argument_name_completions(command_table, query):
     command_name = query['subcommand']
     command = command_table[command_name]
     arguments = query['arguments']
-    unused = { name: argument for name, argument in command.arguments.items()
+    unused = { name: argument for name, argument in get_arguments(command).items()
         if not [ option for option in argument.options_list if option in arguments ]
             and argument.type.settings.get('help') != '==SUPPRESS==' }
     defaults = get_defaults(unused)
@@ -207,7 +207,7 @@ def get_argument_value_list(command_table, query, verbose=False):
     return []
 
 def get_argument(command, argument_name):
-    for name, argument in command.arguments.items():
+    for name, argument in get_arguments(command).items():
         if argument_name in argument.options_list:
             return name, argument
     return None, None
@@ -251,7 +251,7 @@ def get_hover_text(group_index, command_table, command):
     subcommand = command['subcommand']
     if 'argument' in command and subcommand in command_table:
         argument_name = command['argument']
-        argument = next((argument for argument in command_table[subcommand].arguments.values() if argument_name in argument.options_list), None)
+        argument = next((argument for argument in get_arguments(command_table[subcommand]).values() if argument_name in argument.options_list), None)
         if argument:
             req = is_required(argument)
             return { 'paragraphs': [ '`' + ' '.join(argument.options_list) + '`' + ('*' if req else '') + ': ' + argument.type.settings.get('help')
@@ -267,7 +267,7 @@ def get_hover_text(group_index, command_table, command):
         if short_summary:
             paragraphs = [ '{1}\n\n`{0}`\n\n{2}'.format(subcommand, short_summary, help.get('long-summary', '')).strip() ]
             if subcommand in command_table:
-                list = sorted([ argument for argument in command_table[subcommand].arguments.values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + e.options_list[0])
+                list = sorted([ argument for argument in get_arguments(command_table[subcommand]).values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + e.options_list[0])
                 if list:
                     paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(argument.options_list) + '`' + ('*' if is_required(argument) else '') + ': ' + (argument.type.settings.get('help') or '')
                         for argument in list ]) + ('\n\n*Required' if is_required(list[0]) else ''))

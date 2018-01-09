@@ -68,6 +68,10 @@ def load_command_table():
     return command_table
 
 
+def get_arguments(command):
+    return command.arguments
+
+
 def _install_modules(command_table):
     for cmd in command_table:
         command_table[cmd].load_arguments()
@@ -164,7 +168,7 @@ def _to_argument_object(command, cli_arguments):
 
 
 def _find_argument(command, argument_name):
-    for name, argument in command.arguments.items():
+    for name, argument in get_arguments(command).items():
         if argument_name in argument.options_list:
             return name, argument
     return None, None
@@ -172,7 +176,7 @@ def _find_argument(command, argument_name):
 
 def _add_defaults(command, arguments):
     _reload_config()
-    for name, argument in command.arguments.items():
+    for name, argument in get_arguments(command).items():
         if not hasattr(arguments, name):
             default = _find_configured_default(argument)
             if default:
