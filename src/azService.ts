@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
-
+import { existsSync } from 'fs';
 import * as semver from 'semver';
 
 import { exec } from './utils';
@@ -132,15 +132,30 @@ export class AzService {
                 throw 'wrongVersion';
             }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
-            return this.spawn(pythonLocation);
+             return this.spawn(pythonLocation, version);
         }).catch(err => {
             this.process = undefined;
             throw err;
         });
     }
 
-    private spawn(pythonLocation: string) {
-        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation]);
+    private getSpawnProcessOptions(pythonLocation: string, cliVersion: string) {
+        if (process.platform == 'darwin' &&
+            pythonLocation.startsWith('/usr/local/opt/python3/bin/')) {
+                // TODO Get the correct directory if 3.6 doesn't exist.
+                let pythonDir = 'python3.6';
+                let homebrew_cellar = `/usr/local/Cellar/azure-cli/${cliVersion}/libexec/lib/${pythonDir}/site-packages`;
+                if (existsSync(homebrew_cellar)) {
+                    let options = {env: {'PYTHONPATH': homebrew_cellar}};
+                    return options;
+                }
+            }
+        return undefined;
+    }
+
+    private spawn(pythonLocation: string, cliVersion: string) {
+        let processOptions = this.getSpawnProcessOptions(pythonLocation, cliVersion);
+        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], processOptions);
         process.stdout.setEncoding('utf8');
         process.stdout.on('data', data => {
             this.data += data;
