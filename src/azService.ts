@@ -142,12 +142,13 @@ export class AzService {
     private getSpawnProcessOptions(pythonLocation: string, cliVersion: string) {
         if (process.platform == 'darwin' &&
             pythonLocation.startsWith('/usr/local/opt/python3/bin/')) {
-                // TODO Get the correct directory if 3.6 doesn't exist.
-                let pythonDir = 'python3.6';
-                let homebrew_cellar = `/usr/local/Cellar/azure-cli/${cliVersion}/libexec/lib/${pythonDir}/site-packages`;
-                if (existsSync(homebrew_cellar)) {
-                    let options = {env: {'PYTHONPATH': homebrew_cellar}};
-                    return options;
+                let posPythonVersions = ['3.7', '3.6', '3.5', '3.4'];
+                for (let pyVer of posPythonVersions) {
+                    let homebrew_cellar = `/usr/local/Cellar/azure-cli/${cliVersion}/libexec/lib/python${pyVer}/site-packages`;
+                    if (existsSync(homebrew_cellar)) {
+                        let options = {env: {'PYTHONPATH': homebrew_cellar}};
+                        return options;
+                    }
                 }
             }
         return undefined;
