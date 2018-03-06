@@ -132,7 +132,7 @@ export class AzService {
                 throw 'wrongVersion';
             }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
-             return this.spawn(pythonLocation, version);
+            return this.spawn(pythonLocation, version);
         }).catch(err => {
             this.process = undefined;
             throw err;
