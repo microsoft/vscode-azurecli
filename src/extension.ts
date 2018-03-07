@@ -249,10 +249,10 @@ class RunLineInEditor {
 class StatusBarInfo {
 
     private info: StatusBarItem;
-    private status: Status;
+    private status?: Status;
     public liveQuery = false;
 
-    private timer: NodeJS.Timer;
+    private timer?: NodeJS.Timer;
     private disposables: Disposable[] = [];
 
     constructor(private azService: AzService) {
