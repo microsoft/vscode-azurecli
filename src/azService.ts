@@ -2,12 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 import { join } from 'path';
-import { existsSync } from 'fs';
 import * as semver from 'semver';
 
-import { exec } from './utils';
+import { exec, realpath, exists } from './utils';
 
 const isWindows = process.platform === 'win32';
 
@@ -120,7 +119,8 @@ export class AzService {
         if (this.process) {
             return this.process;
         }
-        return this.process = exec('az --version').then(({stdout}) => {
+        return this.process = (async () => {
+            const { stdout } = await exec('az --version');
             let version = (/azure-cli \(([^)]+)\)/m.exec(stdout) || [])[1];
             if (version) {
                 const r = /[^-][a-z]/ig;
@@ -132,30 +132,39 @@ export class AzService {
                 throw 'wrongVersion';
             }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
-            return this.spawn(pythonLocation, version);
-        }).catch(err => {
+            const processOptions = await this.getSpawnProcessOptions(pythonLocation);
+            return this.spawn(pythonLocation, processOptions);
+        })().catch(err => {
             this.process = undefined;
             throw err;
         });
     }
 
-    private getSpawnProcessOptions(pythonLocation: string, cliVersion: string) {
-        if (process.platform == 'darwin' &&
-            pythonLocation.startsWith('/usr/local/opt/python3/bin/')) {
-                let posPythonVersions = ['3.7', '3.6', '3.5', '3.4'];
-                for (let pyVer of posPythonVersions) {
-                    let homebrew_cellar = `/usr/local/Cellar/azure-cli/${cliVersion}/libexec/lib/python${pyVer}/site-packages`;
-                    if (existsSync(homebrew_cellar)) {
-                        let options = {env: {'PYTHONPATH': homebrew_cellar}};
-                        return options;
+    private async getSpawnProcessOptions(pythonLocation: string) {
+        if (process.platform === 'darwin') {
+            const which = await exec('which az');
+            const binPath = await realpath(which.stdout.trim());
+            const cellarBasePath = '/usr/local/Cellar/azure-cli/';
+            if (binPath.startsWith(cellarBasePath)) {
+                const installPath = binPath.substr(0, binPath.indexOf('/', cellarBasePath.length));
+                const posPythonVersions = ['3.7', '3.6', '3.5', '3.4'];
+                const { stdout } = await exec(`${pythonLocation} --version`);
+                const match = /\d+\.\d+/.exec(stdout);
+                if (match) {
+                    posPythonVersions.unshift(match[0]);
+                }
+                for (const pyVer of posPythonVersions) {
+                    const packagesPath = `${installPath}/libexec/lib/python${pyVer}/site-packages`;
+                    if (await exists(packagesPath)) {
+                        return { env: { 'PYTHONPATH': packagesPath } };
                     }
                 }
             }
+        }
         return undefined;
     }
 
-    private spawn(pythonLocation: string, cliVersion: string) {
-        let processOptions = this.getSpawnProcessOptions(pythonLocation, cliVersion);
+    private spawn(pythonLocation: string, processOptions?: SpawnOptions) {
         const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], processOptions);
         process.stdout.setEncoding('utf8');
         process.stdout.on('data', data => {

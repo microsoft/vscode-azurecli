@@ -1,4 +1,5 @@
 import * as cp from 'child_process';
+import * as fs from 'fs';
 
 export interface ExecResult {
     error: Error;
@@ -11,6 +12,24 @@ export function exec(command: string) {
         cp.exec(command, (error, stdout, stderr) => {
             (error || stderr ? reject : resolve)({ error, stdout, stderr });
         });
+    });
+}
+
+export function realpath(path: string) {
+    return new Promise<string>((resolve, reject) => {
+        fs.realpath(path, (error, resolvedPath) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(resolvedPath);
+            }
+        });
+    });
+}
+
+export function exists(path: string) {
+    return new Promise<boolean>(resolve => {
+        fs.exists(path, resolve);
     });
 }
 
