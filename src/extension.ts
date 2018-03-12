@@ -318,10 +318,6 @@ async function azNotFound(wrongVersion: boolean): Promise<void> {
         {
             title: 'Documentation',
             run: installAzureCLI
-        },
-        {
-            title: 'Close',
-            isCloseAffordance: true
         }
     );
     if (result && result.run) {
