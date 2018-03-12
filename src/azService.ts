@@ -6,7 +6,7 @@ import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 import { join } from 'path';
 import * as semver from 'semver';
 
-import { exec, realpath, exists } from './utils';
+import { exec, realpath, exists, readdir } from './utils';
 
 const isWindows = process.platform === 'win32';
 
@@ -142,23 +142,23 @@ export class AzService {
 
     private async getSpawnProcessOptions(pythonLocation: string) {
         if (process.platform === 'darwin') {
-            const which = await exec('which az');
-            const binPath = await realpath(which.stdout.trim());
-            const cellarBasePath = '/usr/local/Cellar/azure-cli/';
-            if (binPath.startsWith(cellarBasePath)) {
-                const installPath = binPath.substr(0, binPath.indexOf('/', cellarBasePath.length));
-                const posPythonVersions = ['3.7', '3.6', '3.5', '3.4'];
-                const { stdout } = await exec(`${pythonLocation} --version`);
-                const match = /\d+\.\d+/.exec(stdout);
-                if (match) {
-                    posPythonVersions.unshift(match[0]);
-                }
-                for (const pyVer of posPythonVersions) {
-                    const packagesPath = `${installPath}/libexec/lib/python${pyVer}/site-packages`;
-                    if (await exists(packagesPath)) {
-                        return { env: { 'PYTHONPATH': packagesPath } };
+            try {
+                const which = await exec('which az');
+                const binPath = await realpath(which.stdout.trim());
+                const cellarBasePath = '/usr/local/Cellar/azure-cli/';
+                if (binPath.startsWith(cellarBasePath)) {
+                    const installPath = binPath.substr(0, binPath.indexOf('/', cellarBasePath.length));
+                    const libPath = `${installPath}/libexec/lib`;
+                    const entries = await readdir(libPath);
+                    for (const entry of entries) {
+                        const packagesPath = `${libPath}/${entry}/site-packages`;
+                        if (await exists(packagesPath)) {
+                            return { env: { 'PYTHONPATH': packagesPath } };
+                        }
                     }
                 }
+            } catch (err) {
+                console.error(err);
             }
         }
         return undefined;

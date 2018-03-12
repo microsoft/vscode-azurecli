@@ -33,6 +33,18 @@ export function exists(path: string) {
     });
 }
 
+export function readdir(path: string) {
+    return new Promise<string[]>((resolve, reject) => {
+        fs.readdir(path, (error, files) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(files);
+            }
+        });
+    });
+}
+
 export function never(n: never) {
     throw new Error(`Should not happen: ${n}`);
 }
