@@ -14,6 +14,10 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.4.2
+
+- Fix [no IntelliSense with latest Azure CLI](https://github.com/Microsoft/vscode-azurecli/issues/35).
+
 ### 0.4.1
 
 - Fix [Azure CLI installed with Homebrew](https://github.com/Microsoft/vscode-azurecli/issues/25).
