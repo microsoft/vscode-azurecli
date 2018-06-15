@@ -1,7 +1,6 @@
 @echo off
 setlocal
 
-SET PYTHONPATH=%~dp0;%PYTHONPATH%
-%1 -m azservice %*
+%1 %~dp0start.py %*
 
 endlocal
