@@ -10,7 +10,7 @@ export interface ExecResult {
 export function exec(command: string) {
     return new Promise<ExecResult>((resolve, reject) => {
         cp.exec(command, (error, stdout, stderr) => {
-            (error || stderr ? reject : resolve)({ error, stdout, stderr });
+            (error ? reject : resolve)({ error, stdout, stderr });
         });
     });
 }

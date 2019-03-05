@@ -14,6 +14,10 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.4.3
+
+- Fix [Extension complaining az not on PATH](https://github.com/Microsoft/vscode-azurecli/issues/46).
+
 ### 0.4.2
 
 - Fix [no IntelliSense with latest Azure CLI](https://github.com/Microsoft/vscode-azurecli/issues/35).

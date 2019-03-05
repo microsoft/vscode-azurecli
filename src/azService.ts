@@ -121,7 +121,11 @@ export class AzService {
         }
         return this.process = (async () => {
             const { stdout } = await exec('az --version');
-            let version = (/azure-cli \(([^)]+)\)/m.exec(stdout) || [])[1];
+            let version = (
+                /azure-cli\s+\(([^)]+)\)/m.exec(stdout)
+                || /azure-cli\s+(\S+)/m.exec(stdout)
+                || []
+            )[1];
             if (version) {
                 const r = /[^-][a-z]/ig;
                 if (r.exec(version)) {
