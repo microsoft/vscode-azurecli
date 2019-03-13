@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 
 export interface ExecResult {
-    error: Error;
+    error: Error | null;
     stdout: string;
     stderr: string;
 }

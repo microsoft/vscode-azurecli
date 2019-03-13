@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import * as opn from 'opn';
 
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri } from 'vscode';
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
@@ -326,7 +325,7 @@ async function azNotFound(wrongVersion: boolean): Promise<void> {
 }
 
 function installAzureCLI() {
-    opn('https://aka.ms/GetTheAzureCLI');
+    env.openExternal(Uri.parse('https://aka.ms/GetTheAzureCLI'));
 }
 
 export function deactivate() {
