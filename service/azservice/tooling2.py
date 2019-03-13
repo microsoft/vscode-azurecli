@@ -51,7 +51,17 @@ def initialize():
 def load_command_table():
     invoker = cli_ctx.invocation_cls(cli_ctx=cli_ctx, commands_loader_cls=cli_ctx.commands_loader_cls, parser_cls=cli_ctx.parser_cls, help_cls=cli_ctx.help_cls)
     cli_ctx.invocation = invoker
-    return invoker.commands_loader.load_command_table(None)
+
+    # turn off applicability check for main loader and load command table
+    invoker.commands_loader.skip_applicability = True
+    cmd_tbl = invoker.commands_loader.load_command_table(None)
+
+    # turn off applicability check for all loaders
+    for loaders in invoker.commands_loader.cmd_to_loader_map.values():
+        for loader in loaders:
+            loader.skip_applicability = True
+
+    return cmd_tbl
 
 
 ARGUMENTS_LOADED = {}

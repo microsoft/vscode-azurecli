@@ -170,7 +170,7 @@ def get_argument_name_completions(command_table, query):
     command = command_table[command_name]
     arguments = query['arguments']
     unused = { name: argument for name, argument in get_arguments(command).items()
-        if not [ option for option in argument.options_list if option in arguments ]
+        if not [ option for option in get_options(argument.options_list) if option in arguments ]
             and argument.type.settings.get('help') != '==SUPPRESS==' }
     defaults = get_defaults(unused)
     return [ {
@@ -181,7 +181,7 @@ def get_argument_name_completions(command_table, query):
         'detail': 'required' if is_required(argument) and not defaults.get(name) else None,
         'documentation': argument.type.settings.get('help'),
         'sortText': ('10_' if is_required(argument) and not defaults.get(name) else '20_') + option
-    } for name, argument in unused.items() for option in argument.options_list ]
+    } for name, argument in unused.items() for option in get_options(argument.options_list) ]
 
 def get_argument_value_completions(command_table, query, verbose=False):
     list = get_argument_value_list(command_table, query, verbose) + \
@@ -213,7 +213,7 @@ def get_argument_value_list(command_table, query, verbose=False):
 
 def get_argument(command, argument_name):
     for name, argument in get_arguments(command).items():
-        if argument_name in argument.options_list:
+        if argument_name in get_options(argument.options_list):
             return name, argument
     return None, None
 
@@ -256,10 +256,10 @@ def get_hover_text(group_index, command_table, command):
     subcommand = command['subcommand']
     if 'argument' in command and subcommand in command_table:
         argument_name = command['argument']
-        argument = next((argument for argument in get_arguments(command_table[subcommand]).values() if argument_name in argument.options_list), None)
+        argument = next((argument for argument in get_arguments(command_table[subcommand]).values() if argument_name in get_options(argument.options_list)), None)
         if argument:
             req = is_required(argument)
-            return { 'paragraphs': [ '`' + ' '.join(argument.options_list) + '`' + ('*' if req else '') + ': ' + argument.type.settings.get('help')
+            return { 'paragraphs': [ '`' + ' '.join(get_options(argument.options_list)) + '`' + ('*' if req else '') + ': ' + argument.type.settings.get('help')
                  + ('\n\n*Required' if req else '') ] }
         argument = next((argument for argument in GLOBAL_ARGUMENTS.values() if argument_name in argument['options']), None)
         if argument:
@@ -272,9 +272,9 @@ def get_hover_text(group_index, command_table, command):
         if short_summary:
             paragraphs = [ '{1}\n\n`{0}`\n\n{2}'.format(subcommand, short_summary, help.get('long-summary', '')).strip() ]
             if subcommand in command_table:
-                list = sorted([ argument for argument in get_arguments(command_table[subcommand]).values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + e.options_list[0])
+                list = sorted([ argument for argument in get_arguments(command_table[subcommand]).values() if argument.type.settings.get('help') != '==SUPPRESS==' ], key=lambda e: str(not is_required(e)) + get_options(e.options_list)[0])
                 if list:
-                    paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(argument.options_list) + '`' + ('*' if is_required(argument) else '') + ': ' + (argument.type.settings.get('help') or '')
+                    paragraphs.append('Arguments\n' + '\n'.join([ '- `' + ' '.join(get_options(argument.options_list)) + '`' + ('*' if is_required(argument) else '') + ': ' + (argument.type.settings.get('help') or '')
                         for argument in list ]) + ('\n\n*Required' if is_required(list[0]) else ''))
                 paragraphs.append('Global Arguments\n' + '\n'.join([ '- `' + ' '.join(argument['options']) + '`: ' + argument['help']
                     for argument in GLOBAL_ARGUMENTS.values() ]))
@@ -298,6 +298,13 @@ def get_short_summary(subcommand, fallback):
     if help:
         return help.get('short-summary', fallback)
     return fallback
+
+def get_options(options):
+    return [ option for option in [
+        option if isinstance(option, str) else
+        option.target if hasattr(option, 'target') else
+        None
+    for option in options ] if option ]
 
 def main():
     timings = False
