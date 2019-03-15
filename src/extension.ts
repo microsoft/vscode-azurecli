@@ -9,6 +9,7 @@ import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem,
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
+import { AzureCliToolsSettings } from './configurationSettings';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
@@ -154,6 +155,7 @@ class RunLineInEditor {
     private queryEnabled = false;
     private query: string | undefined;
     private disposables: Disposable[] = [];
+    private readonly settings: AzureCliToolsSettings = AzureCliToolsSettings.Instance;
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
@@ -167,7 +169,8 @@ class RunLineInEditor {
         this.query = undefined; // TODO
         const cursor = source.selection.active;
         const line = source.document.lineAt(cursor).text;
-        return this.findResultDocument()
+        const isText = (line.indexOf('--query') != -1) || (line.indexOf('-h') != -1) || (line.indexOf('--help') != -1);
+        return this.findResultDocument(isText)
             .then(document => window.showTextDocument(document, ViewColumn.Two, true))
             .then(target => replaceContent(target, JSON.stringify({ 'Running command': line }) + '\n')
                 .then(() => exec(line))
@@ -187,7 +190,17 @@ class RunLineInEditor {
         this.updateResult();
     }
 
-    private findResultDocument() {
+    private findResultDocument(isText: boolean = false) {
+        if (this.settings.showResponseInDifferentTab) {
+            if (isText) {
+                return workspace.openTextDocument({ language: 'text' })
+                    .then(document => this.resultDocument = document);    
+            }
+            else {
+                return workspace.openTextDocument({ language: 'json' })
+                    .then(document => this.resultDocument = document); 
+            }
+        }
         if (this.resultDocument) {
             return Promise.resolve(this.resultDocument);
         }
