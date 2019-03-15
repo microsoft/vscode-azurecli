@@ -89,6 +89,18 @@
         "when": "editorTextFocus && editorLangId == 'azcli'"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "Azure CLI Tools Configuration",
+      "properties": {
+        "ms-azurecli.showResponseInDifferentTab": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Show response in different tab"
+        }
+      }
+    },
     "menus": {
       "editor/context": [
         {
