@@ -14,10 +14,13 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.4.4
+
+- Fix [wrong argument names](https://github.com/Microsoft/vscode-azurecli/issues/44).
+
 ### 0.4.3
 
 - Fix [Extension complaining az not on PATH](https://github.com/Microsoft/vscode-azurecli/issues/46).
-- Fix [wrong argument names](https://github.com/Microsoft/vscode-azurecli/issues/44).
 
 ### 0.4.2
 
