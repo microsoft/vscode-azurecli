@@ -14,7 +14,7 @@ from knack.help_files import helps
 from azure.cli.core import get_default_cli
 from azure.cli.core._profile import _SUBSCRIPTION_NAME, Profile
 from azure.cli.core.util import CLIError
-from azure.cli.core._config import GLOBAL_CONFIG_PATH, DEFAULTS_SECTION
+from azure.cli.core._config import GLOBAL_CONFIG_PATH
 
 
 GLOBAL_ARGUMENTS = {
@@ -108,10 +108,11 @@ def get_current_subscription():
 def get_configured_defaults():
     _reload_config()
     try:
-        options = cli_ctx.config.config_parser.options(DEFAULTS_SECTION)
+        defaults_section = cli_ctx.config.defaults_section_name if hasattr(cli_ctx.config, 'defaults_section_name') else 'defaults'
+        options = cli_ctx.config.config_parser.options(defaults_section)
         defaults = {}
         for opt in options:
-            value = cli_ctx.config.get(DEFAULTS_SECTION, opt)
+            value = cli_ctx.config.get(defaults_section, opt)
             if value:
                 defaults[opt] = value
         return defaults
@@ -185,6 +186,7 @@ def _find_configured_default(argument):
     if not (hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling):
         return None
     try:
-        return cli_ctx.config.get(DEFAULTS_SECTION, argument.type.default_name_tooling, None)
+        defaults_section = cli_ctx.config.defaults_section_name if hasattr(cli_ctx.config, 'defaults_section_name') else 'defaults'
+        return cli_ctx.config.get(defaults_section, argument.type.default_name_tooling, None)
     except configparser.NoSectionError:
         return None
