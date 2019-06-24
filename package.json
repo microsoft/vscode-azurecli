@@ -142,8 +142,7 @@
     "@types/semver": "5.5.0",
     "tslint": "5.16.0",
     "typescript": "3.3.3333",
-    "vscode": "1.1.33",
-    "elegant-spinner": "1.0.1"
+    "vscode": "1.1.33"
   },
   "dependencies": {
     "jmespath": "0.15.0",
