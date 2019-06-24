@@ -241,7 +241,6 @@ class RunLineInEditor {
 
     dispose() {
         this.disposables.forEach(disposable => disposable.dispose());
-        this.runStatusBarItem.dispose();
     }
 }
 
