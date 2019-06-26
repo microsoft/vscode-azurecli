@@ -186,8 +186,8 @@ class RunLineInEditor {
     }
 
     private findResultDocument() {
-        const showResponseInDifferentTab = workspace.getConfiguration('azureCLI', null).get<boolean>('showResultInNewEditor', false)
-        if (this.resultDocument && !showResponseInDifferentTab) {
+        const showResultInNewEditor = workspace.getConfiguration('azureCLI', null).get<boolean>('showResultInNewEditor', false)
+        if (this.resultDocument && !showResultInNewEditor) {
             return Promise.resolve(this.resultDocument);
         }
         return workspace.openTextDocument({ language: 'json' })
