@@ -186,7 +186,7 @@ class RunLineInEditor {
     }
 
     private findResultDocument() {
-        var showResponseInDifferentTab = workspace.getConfiguration("ms-azurecli").get<boolean>("showResponseInDifferentTab", false)
+        const showResponseInDifferentTab = workspace.getConfiguration('azureCLI').get<boolean>('showResultInNewEditor', false)
         if (this.resultDocument && !showResponseInDifferentTab) {
             return Promise.resolve(this.resultDocument);
         }
