@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit } from 'vscode';
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
@@ -306,7 +306,9 @@ function allMatches(regex: RegExp, string: string, group: number) {
 function replaceContent(editor: TextEditor, content: string) {
     const document = editor.document;
     const all = new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end);
-    return editor.edit(builder => builder.replace(all, content))
+    const edit = new WorkspaceEdit();
+    edit.replace(document.uri, all, content);
+    return workspace.applyEdit(edit)
         .then(() => editor.selections = [new Selection(0, 0, 0, 0)]);
 }
 
