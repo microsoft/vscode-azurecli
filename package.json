@@ -93,11 +93,11 @@
       "type": "object",
       "title": "Azure CLI Tools Configuration",
       "properties": {
-        "ms-azurecli.showResponseInDifferentTab": {
+        "azureCLI.showResultInNewEditor": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "description": "Show response in different tab"
+          "description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor."
         }
       }
     },
