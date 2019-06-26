@@ -169,7 +169,7 @@ class RunLineInEditor {
     }
 
     private run(source: TextEditor) {
-        var t0 = Date.now();
+        const t0 = Date.now();
         this.interval = setInterval(() => {
             this.runStatusBarItem.text = `Waiting for response ${this.spinner()}`;
         }, 50);
