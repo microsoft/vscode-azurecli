@@ -89,6 +89,18 @@
         "when": "editorTextFocus && editorLangId == 'azcli'"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "Azure CLI Tools Configuration",
+      "properties": {
+        "azureCLI.showResultInNewEditor": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor."
+        }
+      }
+    },
     "menus": {
       "editor/context": [
         {
