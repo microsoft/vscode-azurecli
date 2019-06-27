@@ -8,18 +8,14 @@ from __future__ import print_function
 import yaml
 
 from six.moves import configparser
-from distutils.version import LooseVersion
 
-from knack.config import CLIConfig
 from knack.help_files import helps
 
-from azure.cli.core import get_default_cli, __version__
+from azure.cli.core import get_default_cli
 from azure.cli.core._profile import _SUBSCRIPTION_NAME, Profile
 from azure.cli.core.util import CLIError
-from azure.cli.core._config import GLOBAL_CONFIG_PATH, GLOBAL_CONFIG_DIR, ENV_VAR_PREFIX
+from azure.cli.core._config import GLOBAL_CONFIG_PATH
 
-
-before_2_0_64 = LooseVersion(__version__) < LooseVersion('2.0.64')
 
 GLOBAL_ARGUMENTS = {
     'verbose': {
@@ -96,10 +92,7 @@ HELP_CACHE = {}
 
 def get_help(group_or_command):
     if group_or_command not in HELP_CACHE and group_or_command in helps:
-        if before_2_0_64: # FullLoader not present with az 2.0.26.
-            HELP_CACHE[group_or_command] = yaml.load(helps[group_or_command])
-        else:
-            HELP_CACHE[group_or_command] = yaml.load(helps[group_or_command], Loader=yaml.FullLoader)
+        HELP_CACHE[group_or_command] = yaml.load(helps[group_or_command])
     return HELP_CACHE.get(group_or_command)
 
 
@@ -113,23 +106,15 @@ def get_current_subscription():
 
 
 def get_configured_defaults():
-    config = _reload_config()
+    _reload_config()
     try:
-        defaults_section = config.defaults_section_name if hasattr(config, 'defaults_section_name') else 'defaults'
+        defaults_section = cli_ctx.config.defaults_section_name if hasattr(cli_ctx.config, 'defaults_section_name') else 'defaults'
+        options = cli_ctx.config.config_parser.options(defaults_section)
         defaults = {}
-        if before_2_0_64:
-            options = config.config_parser.options(defaults_section)
-            for opt in options:
-                value = config.get(defaults_section, opt)
-                if value:
-                    defaults[opt] = value
-        else:
-            options = config.items(defaults_section)
-            for opt in options:
-                name = opt['name']
-                value = opt['value']
-                if value:
-                    defaults[name] = value
+        for opt in options:
+            value = cli_ctx.config.get(defaults_section, opt)
+            if value:
+                defaults[opt] = value
         return defaults
     except configparser.NoSectionError:
         return {}
@@ -141,12 +126,12 @@ def is_required(argument):
 
 
 def get_defaults(arguments):
-    config = _reload_config()
-    return {name: _get_default(config, argument) for name, argument in arguments.items()}
+    _reload_config()
+    return {name: _get_default(argument) for name, argument in arguments.items()}
 
 
-def _get_default(config, argument):
-    configured = _find_configured_default(config, argument)
+def _get_default(argument):
+    configured = _find_configured_default(argument)
     # TODO: Some default values are built-in (not configured as we want here), but we don't know which.
     return configured or argument.type.settings.get('default')
 
@@ -183,10 +168,10 @@ def _find_argument(command, argument_name):
 
 
 def _add_defaults(command, arguments):
-    config = _reload_config()
+    _reload_config()
     for name, argument in get_arguments(command).items():
         if not hasattr(arguments, name):
-            default = _find_configured_default(config, argument)
+            default = _find_configured_default(argument)
             if default:
                 setattr(arguments, name, default)
 
@@ -194,18 +179,14 @@ def _add_defaults(command, arguments):
 
 
 def _reload_config():
-    if before_2_0_64:
-        cli_ctx.config.config_parser.read(GLOBAL_CONFIG_PATH)
-        return cli_ctx.config
-    else:
-        return CLIConfig(config_dir=GLOBAL_CONFIG_DIR, config_env_var_prefix=ENV_VAR_PREFIX)
+    cli_ctx.config.config_parser.read(GLOBAL_CONFIG_PATH)
 
 
-def _find_configured_default(config, argument):
+def _find_configured_default(argument):
     if not (hasattr(argument.type, 'default_name_tooling') and argument.type.default_name_tooling):
         return None
     try:
-        defaults_section = config.defaults_section_name if hasattr(config, 'defaults_section_name') else 'defaults'
-        return config.get(defaults_section, argument.type.default_name_tooling, None)
+        defaults_section = cli_ctx.config.defaults_section_name if hasattr(cli_ctx.config, 'defaults_section_name') else 'defaults'
+        return cli_ctx.config.get(defaults_section, argument.type.default_name_tooling, None)
     except configparser.NoSectionError:
         return None
