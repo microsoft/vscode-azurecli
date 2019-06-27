@@ -6,6 +6,10 @@
 # pylint: skip-file
 import unittest
 import collections
+try:
+    collectionsAbc = collections.abc
+except AttributeError:
+    collectionsAbc = collections
 
 from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments
 
@@ -110,7 +114,7 @@ class ToolingTest(unittest.TestCase):
         self.assertIsNone(argument.choices)
         self.assertIsNotNone(argument.completer)
         values = run_argument_value_completer(command, argument, {})
-        self.assertTrue(isinstance(values, collections.Sequence))
+        self.assertTrue(isinstance(values, collectionsAbc.Sequence))
 
     def test_current_subscription(self):
         subscription = get_current_subscription()

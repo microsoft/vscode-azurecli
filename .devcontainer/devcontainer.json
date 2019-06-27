@@ -1,0 +1,5 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"name": "Azure CLI",
+	"dockerFile": "Dockerfile",
+}
