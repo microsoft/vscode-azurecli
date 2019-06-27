@@ -15,6 +15,11 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 export PYTHONPATH="${DIR}:${PYTHONPATH}"
 
 PYTHON="${1:-$HOME/lib/azure-cli/bin/python}"
+if [ -z "${1}" ]; then
+    PYTHON=$(az --version | sed -n "s/^Python location '\([^']*\)'/\1/p")
+else
+    PYTHON=${1}
+fi
 shift
 
 "$PYTHON" -m unittest discover -s tests "$@"

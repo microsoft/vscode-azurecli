@@ -1,0 +1,13 @@
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily midnight build
+  branches:
+    include:
+    - chrmarti/pipelines
+
+steps:
+- script: |
+    set -e
+    docker-compose -f .devcontainer/docker-compose.test.yml build --no-cache --pull
+    docker-compose -f .devcontainer/docker-compose.test.yml run vscode-azurecli-test
+  displayName: Run Tests
