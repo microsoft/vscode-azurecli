@@ -1,0 +1,13 @@
+version: '3.4'
+services:
+  vscode-azurecli-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: "/workspace"
+    volumes:
+      - "${PWD}:/workspace"
+    command: "./service/run_tests"
+
+# docker-compose -f .devcontainer/docker-compose.test.yml build --no-cache --pull
+# docker-compose -f .devcontainer/docker-compose.test.yml run vscode-azurecli-test
