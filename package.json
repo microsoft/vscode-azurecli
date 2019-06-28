@@ -133,16 +133,15 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install"
+    "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
     "@types/jmespath": "0.15.0",
     "@types/node": "10.14.1",
     "@types/semver": "5.5.0",
+    "@types/vscode": "^1.35.0",
     "tslint": "5.16.0",
-    "typescript": "3.5.2",
-    "vscode": "1.1.33"
+    "typescript": "3.5.2"
   },
   "dependencies": {
     "jmespath": "0.15.0",
