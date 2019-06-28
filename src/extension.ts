@@ -8,6 +8,7 @@ import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem,
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
+import * as spinner from 'elegant-spinner';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
@@ -152,15 +153,43 @@ class RunLineInEditor {
     private queryEnabled = false;
     private query: string | undefined;
     private disposables: Disposable[] = [];
+    private commandRunningStatusBarItem: StatusBarItem;
+    private statusBarUpdateInterval!: NodeJS.Timer;
+    private statusBarSpinner = spinner();
+    private hideStatusBarItemTimeout! : NodeJS.Timeout;
+    private statusBarItemText : string = '';
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInEditor', editor => this.run(editor)));
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
+
+        this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+        this.disposables.push(this.commandRunningStatusBarItem);
     }
 
+    private runningCommandCount : number = 0;
     private run(source: TextEditor) {
+        this.runningCommandCount += 1;
+        const t0 = Date.now();
+        if (this.runningCommandCount == 1)
+        {
+            this.statusBarItemText = `Azure CLI: Waiting for response`;
+            this.statusBarUpdateInterval = setInterval(() => {
+                if (this.runningCommandCount == 1)
+                {
+                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
+                }
+                else
+                {
+                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
+                }
+            }, 50);
+        }
+        this.commandRunningStatusBarItem.show();
+        clearTimeout(this.hideStatusBarItemTimeout);
+
         this.parsedResult = undefined;
         this.query = undefined; // TODO
         const cursor = source.selection.active;
@@ -174,8 +203,24 @@ class RunLineInEditor {
                         .then(() => this.parsedResult = JSON.parse(content))
                         .then(undefined, err => {})
                 )
+                .then(() => this.commandFinished(t0))
             )
             .then(undefined, console.error);
+    }
+
+    private commandFinished(startTime: number)
+    {
+        this.runningCommandCount -= 1
+        this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
+        this.commandRunningStatusBarItem.text = this.statusBarItemText;
+
+        if (this.runningCommandCount == 0)
+        {
+            clearInterval(this.statusBarUpdateInterval);
+
+            // hide status bar item after 10 seconds to keep status bar uncluttered
+            this.hideStatusBarItemTimeout = setTimeout(() => this.commandRunningStatusBarItem.hide(), 10000);
+        }
     }
 
     private toggleQuery(source: TextEditor) {
