@@ -175,7 +175,7 @@ class RunLineInEditor {
         const t0 = Date.now();
         if (this.runningCommandCount == 1)
         {
-            this.statusBarItemText = `Waiting for response`;
+            this.statusBarItemText = `Azure CLI: Waiting for response`;
             this.statusBarUpdateInterval = setInterval(() => {
                 if (this.runningCommandCount == 1)
                 {
@@ -211,7 +211,7 @@ class RunLineInEditor {
     private commandFinished(startTime: number)
     {
         this.runningCommandCount -= 1
-        this.statusBarItemText = 'AZ CLI command executed in ' + (Date.now() - startTime) + ' milliseconds';
+        this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
         if (this.runningCommandCount == 0)
