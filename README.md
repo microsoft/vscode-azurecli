@@ -14,6 +14,12 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.4.6
+
+- PR [Add status bar item to indicate progress](https://github.com/Microsoft/vscode-azurecli/pull/56) by [@mburleigh](https://github.com/mburleigh).
+- PR [Open results in new editor](https://github.com/Microsoft/vscode-azurecli/pull/55) by [@mburleigh](https://github.com/mburleigh).
+- Fix [Use CLIConfig](https://github.com/Microsoft/vscode-azurecli/issues/52).
+
 ### 0.4.5
 
 - Fix [Read defaults_section_name from config](https://github.com/Microsoft/vscode-azurecli/issues/50).

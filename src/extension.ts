@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit } from 'vscode';
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
-import { AzureCliToolsSettings } from './configurationSettings';
+import * as spinner from 'elegant-spinner';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
@@ -146,8 +146,6 @@ class RunLineInTerminal {
     }
 }
 
-const elegantSpinner = require('elegant-spinner');
-
 class RunLineInEditor {
 
     private resultDocument: TextDocument | undefined;
@@ -155,10 +153,11 @@ class RunLineInEditor {
     private queryEnabled = false;
     private query: string | undefined;
     private disposables: Disposable[] = [];
-    private readonly settings: AzureCliToolsSettings = AzureCliToolsSettings.Instance;
-    private runStatusBarItem: StatusBarItem;
-    private interval!: NodeJS.Timer;
-    private spinner = elegantSpinner();
+    private commandRunningStatusBarItem: StatusBarItem;
+    private statusBarUpdateInterval!: NodeJS.Timer;
+    private statusBarSpinner = spinner();
+    private hideStatusBarItemTimeout! : NodeJS.Timeout;
+    private statusBarItemText : string = '';
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
@@ -166,35 +165,62 @@ class RunLineInEditor {
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
 
-        this.runStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+        this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+        this.disposables.push(this.commandRunningStatusBarItem);
     }
 
+    private runningCommandCount : number = 0;
     private run(source: TextEditor) {
-        var t0 = Date.now();
-        this.interval = setInterval(() => {
-            this.runStatusBarItem.text = `Waiting for response ${this.spinner()}`;
-        }, 50);
-        this.runStatusBarItem.show();
+        this.runningCommandCount += 1;
+        const t0 = Date.now();
+        if (this.runningCommandCount == 1)
+        {
+            this.statusBarItemText = `Azure CLI: Waiting for response`;
+            this.statusBarUpdateInterval = setInterval(() => {
+                if (this.runningCommandCount == 1)
+                {
+                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
+                }
+                else
+                {
+                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
+                }
+            }, 50);
+        }
+        this.commandRunningStatusBarItem.show();
+        clearTimeout(this.hideStatusBarItemTimeout);
 
         this.parsedResult = undefined;
         this.query = undefined; // TODO
         const cursor = source.selection.active;
         const line = source.document.lineAt(cursor).text;
-        const isPlainText = (line.indexOf('--query') !== -1) || (line.indexOf('-h') !== -1) || (line.indexOf('--help') !== -1);
         return this.findResultDocument()
             .then(document => window.showTextDocument(document, ViewColumn.Two, true))
             .then(target => replaceContent(target, JSON.stringify({ 'Running command': line }) + '\n')
                 .then(() => exec(line))
                 .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
-                .then(content => {
-                    replaceContent(target, content, isPlainText ? 'plaintext' : '')
+                .then(content => replaceContent(target, content)
                         .then(() => this.parsedResult = JSON.parse(content))
-                        .then(undefined, err => {});
-                    clearInterval(this.interval);
-                    this.runStatusBarItem.text = 'AZ CLI command executed in ' + (Date.now() - t0) + ' milliseconds.';
-                })
+                        .then(undefined, err => {})
+                )
+                .then(() => this.commandFinished(t0))
             )
             .then(undefined, console.error);
+    }
+
+    private commandFinished(startTime: number)
+    {
+        this.runningCommandCount -= 1
+        this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
+        this.commandRunningStatusBarItem.text = this.statusBarItemText;
+
+        if (this.runningCommandCount == 0)
+        {
+            clearInterval(this.statusBarUpdateInterval);
+
+            // hide status bar item after 10 seconds to keep status bar uncluttered
+            this.hideStatusBarItemTimeout = setTimeout(() => this.commandRunningStatusBarItem.hide(), 10000);
+        }
     }
 
     private toggleQuery(source: TextEditor) {
@@ -205,11 +231,8 @@ class RunLineInEditor {
     }
 
     private findResultDocument() {
-        if (this.settings.showResponseInDifferentTab) {
-            return workspace.openTextDocument({ language: 'json' })
-                .then(document => this.resultDocument = document); 
-        }
-        if (this.resultDocument) {
+        const showResultInNewEditor = workspace.getConfiguration('azureCLI', null).get<boolean>('showResultInNewEditor', false)
+        if (this.resultDocument && !showResultInNewEditor) {
             return Promise.resolve(this.resultDocument);
         }
         return workspace.openTextDocument({ language: 'json' })
@@ -263,7 +286,6 @@ class RunLineInEditor {
 
     dispose() {
         this.disposables.forEach(disposable => disposable.dispose());
-        this.runStatusBarItem.dispose();
     }
 }
 
@@ -332,7 +354,9 @@ function replaceContent(editor: TextEditor, content: string, documentLanguage: s
         languages.setTextDocumentLanguage(document, documentLanguage);
     }
     const all = new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end);
-    return editor.edit(builder => builder.replace(all, content))
+    const edit = new WorkspaceEdit();
+    edit.replace(document.uri, all, content);
+    return workspace.applyEdit(edit)
         .then(() => editor.selections = [new Selection(0, 0, 0, 0)]);
 }
 
