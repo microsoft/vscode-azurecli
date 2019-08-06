@@ -171,41 +171,124 @@ class RunLineInEditor {
 
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
-        this.runningCommandCount += 1;
-        const t0 = Date.now();
-        if (this.runningCommandCount == 1)
+        const command = this.GetSelectedCommand(source);
+        if (command.length > 0)
         {
-            this.statusBarItemText = `Azure CLI: Waiting for response`;
-            this.statusBarUpdateInterval = setInterval(() => {
-                if (this.runningCommandCount == 1)
-                {
-                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
-                }
-                else
-                {
-                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
-                }
-            }, 50);
-        }
-        this.commandRunningStatusBarItem.show();
-        clearTimeout(this.hideStatusBarItemTimeout);
+            this.runningCommandCount += 1;
+            const t0 = Date.now();
+            if (this.runningCommandCount === 1)
+            {
+                this.statusBarItemText = `Azure CLI: Waiting for response`;
+                this.statusBarUpdateInterval = setInterval(() => {
+                    if (this.runningCommandCount === 1)
+                    {
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
+                    }
+                    else
+                    {
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
+                    }
+                }, 50);
+            }
+            this.commandRunningStatusBarItem.show();
+            clearTimeout(this.hideStatusBarItemTimeout);
 
-        this.parsedResult = undefined;
-        this.query = undefined; // TODO
-        const cursor = source.selection.active;
-        const line = source.document.lineAt(cursor).text;
-        return this.findResultDocument()
-            .then(document => window.showTextDocument(document, ViewColumn.Two, true))
-            .then(target => replaceContent(target, JSON.stringify({ 'Running command': line }) + '\n')
-                .then(() => exec(line))
-                .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
-                .then(content => replaceContent(target, content)
-                        .then(() => this.parsedResult = JSON.parse(content))
-                        .then(undefined, err => {})
+            this.parsedResult = undefined;
+            this.query = undefined; // TODO
+            return this.findResultDocument()
+                .then(document => window.showTextDocument(document, ViewColumn.Two, true))
+                .then(target => replaceContent(target, JSON.stringify({ 'Running command': command }) + '\n')
+                    .then(() => exec(command))
+                    .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
+                    .then(content => replaceContent(target, content)
+                            .then(() => this.parsedResult = JSON.parse(content))
+                            .then(undefined, err => {})
+                    )
+                    .then(() => this.commandFinished(t0))
                 )
-                .then(() => this.commandFinished(t0))
-            )
-            .then(undefined, console.error);
+                .then(undefined, console.error);
+        }
+    }
+
+    private GetSelectedCommand(source: TextEditor)
+    {
+        if (source.selection.isEmpty)
+        {
+            //const cursor = source.selection.active;
+            //var lineNumber = source.document.lineAt(source.selection.active).lineNumber;
+
+            var lineNumber = source.selection.active.line;
+            if (source.document.lineAt(lineNumber).text.length === 0)
+            {
+                window.showInformationMessage<any>("Please put the cursor on a line that contains a command.");
+                return "";
+            }
+            
+            // find the start of the command (if necessary)
+            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith("az"))
+            {
+                lineNumber--;
+            }
+
+            var command = this.StripComments(source.document.lineAt(lineNumber).text);
+
+            // using backtick (`) as continuation character
+            while (command.trim().endsWith("`"))
+            {
+                // concatenate all lines into a single command
+                lineNumber ++;
+                command = command.replace("`", "") + this.StripComments(source.document.lineAt(lineNumber).text);
+            }
+            return command;
+        }
+        else
+        {
+            // execute only the selected text
+            const selectionStart = source.selection.start;
+            const selectionEnd = source.selection.end;
+            if (selectionStart.line === selectionEnd.line)
+            {
+                return this.StripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
+            }
+            else
+            {
+                command = this.StripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
+                for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
+                    var line = this.StripComments(source.document.lineAt(index).text);
+                    if (line.startsWith("az"))
+                    {
+                        window.showErrorMessage<any>("Multiple command selection not supported");
+                        return "";
+                    }
+                    if (index === selectionEnd.line)
+                    {
+                        command = command.replace("`", "") + line.substring(0, selectionEnd.character);
+                    }
+                    else
+                    {
+                        command = command.replace("`", "") + line;
+                    }
+                }
+                return command;
+            }
+        }
+    }
+
+    private StripComments(text: string)
+    {
+        // allow for single line comments on the same line as the command (// or #)
+        var i = text.search("//");
+        if (i !== -1)
+        {
+            return text.substring(0, i)
+        }
+        i = text.search("#");
+        if (i !== -1)
+        {
+            return text.substring(0, i)
+        }
+
+        return text;
     }
 
     private commandFinished(startTime: number)
@@ -214,7 +297,7 @@ class RunLineInEditor {
         this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
-        if (this.runningCommandCount == 0)
+        if (this.runningCommandCount === 0)
         {
             clearInterval(this.statusBarUpdateInterval);
 
@@ -348,11 +431,8 @@ function allMatches(regex: RegExp, string: string, group: number) {
     }
 }
 
-function replaceContent(editor: TextEditor, content: string, documentLanguage: string = '') {
+function replaceContent(editor: TextEditor, content: string) {
     const document = editor.document;
-    if (documentLanguage) {
-        languages.setTextDocumentLanguage(document, documentLanguage);
-    }
     const all = new Range(new Position(0, 0), document.lineAt(document.lineCount - 1).range.end);
     const edit = new WorkspaceEdit();
     edit.replace(document.uri, all, content);
