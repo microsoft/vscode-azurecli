@@ -173,11 +173,11 @@ class RunLineInEditor {
     private run(source: TextEditor) {
         this.runningCommandCount += 1;
         const t0 = Date.now();
-        if (this.runningCommandCount == 1)
+        if (this.runningCommandCount === 1)
         {
             this.statusBarItemText = `Azure CLI: Waiting for response`;
             this.statusBarUpdateInterval = setInterval(() => {
-                if (this.runningCommandCount == 1)
+                if (this.runningCommandCount === 1)
                 {
                     this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
                 }
@@ -214,7 +214,7 @@ class RunLineInEditor {
         this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
-        if (this.runningCommandCount == 0)
+        if (this.runningCommandCount === 0)
         {
             clearInterval(this.statusBarUpdateInterval);
 
