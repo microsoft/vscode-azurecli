@@ -214,9 +214,6 @@ class RunLineInEditor {
     {
         if (source.selection.isEmpty)
         {
-            //const cursor = source.selection.active;
-            //var lineNumber = source.document.lineAt(source.selection.active).lineNumber;
-
             var lineNumber = source.selection.active.line;
             if (source.document.lineAt(lineNumber).text.length === 0)
             {
@@ -240,7 +237,7 @@ class RunLineInEditor {
                 command = command.replace("`", "") + this.StripComments(source.document.lineAt(lineNumber).text);
             }
             return command;
-        }
+        } 
         else
         {
             // execute only the selected text
