@@ -172,20 +172,16 @@ class RunLineInEditor {
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
         const command = this.GetSelectedCommand(source);
-        if (command.length > 0)
-        {
+        if (command.length > 0) {
             this.runningCommandCount += 1;
             const t0 = Date.now();
-            if (this.runningCommandCount === 1)
-            {
+            if (this.runningCommandCount === 1) {
                 this.statusBarItemText = `Azure CLI: Waiting for response`;
                 this.statusBarUpdateInterval = setInterval(() => {
-                    if (this.runningCommandCount === 1)
-                    {
+                    if (this.runningCommandCount === 1) {
                         this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
                     }
-                    else
-                    {
+                    else {
                         this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
                     }
                 }, 50);
@@ -210,59 +206,48 @@ class RunLineInEditor {
         }
     }
 
-    private GetSelectedCommand(source: TextEditor)
-    {
-        if (source.selection.isEmpty)
-        {
+    private GetSelectedCommand(source: TextEditor) {
+        if (source.selection.isEmpty) {
             var lineNumber = source.selection.active.line;
-            if (source.document.lineAt(lineNumber).text.length === 0)
-            {
+            if (source.document.lineAt(lineNumber).text.length === 0) {
                 window.showInformationMessage<any>("Please put the cursor on a line that contains a command.");
                 return "";
             }
             
             // find the start of the command (if necessary)
-            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith("az"))
-            {
+            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith("az")) {
                 lineNumber--;
             }
 
             var command = this.StripComments(source.document.lineAt(lineNumber).text);
 
             // using backtick (`) as continuation character
-            while (command.trim().endsWith("`"))
-            {
+            while (command.trim().endsWith("`")) {
                 // concatenate all lines into a single command
                 lineNumber ++;
                 command = command.replace("`", "") + this.StripComments(source.document.lineAt(lineNumber).text);
             }
             return command;
         } 
-        else
-        {
+        else {
             // execute only the selected text
             const selectionStart = source.selection.start;
             const selectionEnd = source.selection.end;
-            if (selectionStart.line === selectionEnd.line)
-            {
+            if (selectionStart.line === selectionEnd.line) {
                 return this.StripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
             }
-            else
-            {
+            else {
                 command = this.StripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
                 for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
                     var line = this.StripComments(source.document.lineAt(index).text);
-                    if (line.startsWith("az"))
-                    {
+                    if (line.startsWith("az")) {
                         window.showErrorMessage<any>("Multiple command selection not supported");
                         return "";
                     }
-                    if (index === selectionEnd.line)
-                    {
+                    if (index === selectionEnd.line) {
                         command = command.replace("`", "") + line.substring(0, selectionEnd.character);
                     }
-                    else
-                    {
+                    else {
                         command = command.replace("`", "") + line;
                     }
                 }
@@ -271,31 +256,26 @@ class RunLineInEditor {
         }
     }
 
-    private StripComments(text: string)
-    {
+    private StripComments(text: string) {
         // allow for single line comments on the same line as the command (// or #)
         var i = text.search("//");
-        if (i !== -1)
-        {
+        if (i !== -1) {
             return text.substring(0, i)
         }
         i = text.search("#");
-        if (i !== -1)
-        {
+        if (i !== -1) {
             return text.substring(0, i)
         }
 
         return text;
     }
 
-    private commandFinished(startTime: number)
-    {
+    private commandFinished(startTime: number) {
         this.runningCommandCount -= 1
         this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
-        if (this.runningCommandCount === 0)
-        {
+        if (this.runningCommandCount === 0) {
             clearInterval(this.statusBarUpdateInterval);
 
             // hide status bar item after 10 seconds to keep status bar uncluttered
