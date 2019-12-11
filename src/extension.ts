@@ -207,25 +207,29 @@ class RunLineInEditor {
     }
 
     private getSelectedCommand(source: TextEditor) {
+        const continuationCharacter = "`";
+        const commandPrefix = "az";
+
         if (source.selection.isEmpty) {
             var lineNumber = source.selection.active.line;
             if (source.document.lineAt(lineNumber).text.length === 0) {
-                window.showInformationMessage<any>("Please put the cursor on a line that contains a command.");
+                window.showInformationMessage<any>("Please put the cursor on a line that contains a command (or part of a command).");
                 return "";
             }
             
-            // find the start of the command (if necessary)
-            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith("az")) {
+            // look upwards find the start of the command (if necessary)
+            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith(commandPrefix)) {
                 lineNumber--;
             }
 
+            // this will be the first (maybe only) line of the command
             var command = this.stripComments(source.document.lineAt(lineNumber).text);
 
             // using backtick (`) as continuation character
-            while (command.trim().endsWith("`")) {
+            while (command.trim().endsWith(continuationCharacter)) {
                 // concatenate all lines into a single command
                 lineNumber ++;
-                command = command.replace("`", "") + this.stripComments(source.document.lineAt(lineNumber).text);
+                command = command.trim().slice(0, -1) + this.stripComments(source.document.lineAt(lineNumber).text);
             }
             return command;
         } 
@@ -234,21 +238,30 @@ class RunLineInEditor {
             const selectionStart = source.selection.start;
             const selectionEnd = source.selection.end;
             if (selectionStart.line === selectionEnd.line) {
+                // single line command
                 return this.stripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
             }
             else {
+                // multiline command
                 command = this.stripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
                 for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
+                    if (command.trim().endsWith(continuationCharacter)) {
+                        command = command.trim().slice(0, -1);  // remove continuation character from command
+                    }
+
                     var line = this.stripComments(source.document.lineAt(index).text);
-                    if (line.startsWith("az")) {
+
+                    if (line.trim().toLowerCase().startsWith(commandPrefix)) {
                         window.showErrorMessage<any>("Multiple command selection not supported");
                         return "";
                     }
+
+                    // append this line to the command string
                     if (index === selectionEnd.line) {
-                        command = command.replace("`", "") + line.substring(0, selectionEnd.character);
+                        command = command + line.substring(0, selectionEnd.character);  // only append up to the end of the selection
                     }
                     else {
-                        command = command.replace("`", "") + line;
+                        command = command + line;
                     }
                 }
                 return command;
