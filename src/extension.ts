@@ -207,7 +207,7 @@ class RunLineInEditor {
     }
 
     private getSelectedCommand(source: TextEditor) {
-        const continuationCharacter = "`";
+        const continuationCharacter = "`";  // using backtick (`) as continuation character
         const commandPrefix = "az";
 
         if (source.selection.isEmpty) {
@@ -225,7 +225,6 @@ class RunLineInEditor {
             // this will be the first (maybe only) line of the command
             var command = this.stripComments(source.document.lineAt(lineNumber).text);
 
-            // using backtick (`) as continuation character
             while (command.trim().endsWith(continuationCharacter)) {
                 // concatenate all lines into a single command
                 lineNumber ++;
