@@ -171,7 +171,7 @@ class RunLineInEditor {
 
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
-        const command = this.GetSelectedCommand(source);
+        const command = this.getSelectedCommand(source);
         if (command.length > 0) {
             this.runningCommandCount += 1;
             const t0 = Date.now();
@@ -206,7 +206,7 @@ class RunLineInEditor {
         }
     }
 
-    private GetSelectedCommand(source: TextEditor) {
+    private getSelectedCommand(source: TextEditor) {
         if (source.selection.isEmpty) {
             var lineNumber = source.selection.active.line;
             if (source.document.lineAt(lineNumber).text.length === 0) {
@@ -219,13 +219,13 @@ class RunLineInEditor {
                 lineNumber--;
             }
 
-            var command = this.StripComments(source.document.lineAt(lineNumber).text);
+            var command = this.stripComments(source.document.lineAt(lineNumber).text);
 
             // using backtick (`) as continuation character
             while (command.trim().endsWith("`")) {
                 // concatenate all lines into a single command
                 lineNumber ++;
-                command = command.replace("`", "") + this.StripComments(source.document.lineAt(lineNumber).text);
+                command = command.replace("`", "") + this.stripComments(source.document.lineAt(lineNumber).text);
             }
             return command;
         } 
@@ -234,12 +234,12 @@ class RunLineInEditor {
             const selectionStart = source.selection.start;
             const selectionEnd = source.selection.end;
             if (selectionStart.line === selectionEnd.line) {
-                return this.StripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
+                return this.stripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
             }
             else {
-                command = this.StripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
+                command = this.stripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
                 for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
-                    var line = this.StripComments(source.document.lineAt(index).text);
+                    var line = this.stripComments(source.document.lineAt(index).text);
                     if (line.startsWith("az")) {
                         window.showErrorMessage<any>("Multiple command selection not supported");
                         return "";
@@ -256,7 +256,7 @@ class RunLineInEditor {
         }
     }
 
-    private StripComments(text: string) {
+    private stripComments(text: string) {
         // allow for single line comments on the same line as the command (// or #)
         var i = text.search("//");
         if (i !== -1) {
