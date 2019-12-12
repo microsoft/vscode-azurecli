@@ -280,9 +280,14 @@ class RunLineInEditor {
             return this.continuationCharacter;  // don't let a comment terminate a sequence of command fragments
         }
 
-        var i = text.search("#");
+        var i = text.search(" #");
         if (i !== -1) {
             return text.substring(0, i)
+        }
+
+        i = text.search(this.continuationCharacter + "#");
+        if (i !== -1) {
+            return text.substring(0, i+1)
         }
 
         // default is no comments found
