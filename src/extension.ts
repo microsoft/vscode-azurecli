@@ -206,8 +206,9 @@ class RunLineInEditor {
         }
     }
 
+    private continuationCharacter : string = "`";  // using backtick (`) as continuation character
+
     private getSelectedCommand(source: TextEditor) {
-        const continuationCharacter = "`";  // using backtick (`) as continuation character
         const commandPrefix = "az";
 
         if (source.selection.isEmpty) {
@@ -225,7 +226,7 @@ class RunLineInEditor {
             // this will be the first (maybe only) line of the command
             var command = this.stripComments(source.document.lineAt(lineNumber).text);
 
-            while (command.trim().endsWith(continuationCharacter)) {
+            while (command.trim().endsWith(this.continuationCharacter)) {
                 // concatenate all lines into a single command
                 lineNumber ++;
                 command = command.trim().slice(0, -1) + this.stripComments(source.document.lineAt(lineNumber).text);
@@ -244,7 +245,7 @@ class RunLineInEditor {
                 // multiline command
                 command = this.stripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
                 for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
-                    if (command.trim().endsWith(continuationCharacter)) {
+                    if (command.trim().endsWith(this.continuationCharacter)) {
                         command = command.trim().slice(0, -1);  // remove continuation character from command
                     }
 
@@ -269,16 +270,22 @@ class RunLineInEditor {
     }
 
     private stripComments(text: string) {
-        // allow for single line comments on the same line as the command (// or #)
-        var i = text.search("//");
-        if (i !== -1) {
-            return text.substring(0, i)
+        // allow for single line comments (whole line or on the same line as the command)
+        // var i = text.search("//");
+        // if (i !== -1) {
+        //     return text.substring(0, i)
+        // }
+
+        if (text.trim().startsWith("#")) {
+            return this.continuationCharacter;  // don't let a comment terminate a sequence of command fragments
         }
-        i = text.search("#");
+
+        var i = text.search("#");
         if (i !== -1) {
             return text.substring(0, i)
         }
 
+        // default is no comments found
         return text;
     }
 
