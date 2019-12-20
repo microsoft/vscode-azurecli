@@ -98,6 +98,12 @@
           "default": false,
           "scope": "resource",
           "description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor."
+        },
+        "azureCLI.continuationCharacter": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "Override the default continuation character (backtick [`] on Windows otherwise backslash [\\]) used for multiline commands"
         }
       }
     },
