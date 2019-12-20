@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit,  } from 'vscode';
+import * as process from "process";
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
@@ -158,6 +159,8 @@ class RunLineInEditor {
     private statusBarSpinner = spinner();
     private hideStatusBarItemTimeout! : NodeJS.Timeout;
     private statusBarItemText : string = '';
+    // using backtick (`) as continuation character on Windows, backslash (\) on other systems
+    private continuationCharacter : string = process.platform === "win32" ? "`" : "\\";
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
@@ -166,11 +169,12 @@ class RunLineInEditor {
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
 
         this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-        this.disposables.push(this.commandRunningStatusBarItem);
+        this.disposables.push(this.commandRunningStatusBarItem);        
     }
 
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
+        this.RefreshContinuationCharacter();
         const command = this.getSelectedCommand(source);
         if (command.length > 0) {
             this.runningCommandCount += 1;
@@ -206,7 +210,16 @@ class RunLineInEditor {
         }
     }
 
-    private continuationCharacter : string = "`";  // using backtick (`) as continuation character
+    private RefreshContinuationCharacter() {
+        // the continuation character setting can be changed after the extension is loaded
+        const settingsContinuationCharacter = workspace.getConfiguration('azureCLI', null).get<string>('continuationCharacter', "");
+        if (settingsContinuationCharacter.length > 0) {
+            this.continuationCharacter = settingsContinuationCharacter;
+        }
+        else {
+            this.continuationCharacter = process.platform === "win32" ? "`" : "\\";
+        }
+    }
 
     private getSelectedCommand(source: TextEditor) {
         const commandPrefix = "az";
@@ -270,27 +283,16 @@ class RunLineInEditor {
     }
 
     private stripComments(text: string) {
-        // allow for single line comments (whole line or on the same line as the command)
-        // var i = text.search("//");
-        // if (i !== -1) {
-        //     return text.substring(0, i)
-        // }
-
         if (text.trim().startsWith("#")) {
-            return this.continuationCharacter;  // don't let a comment terminate a sequence of command fragments
+            return this.continuationCharacter;  // don't let a whole line comment terminate a sequence of command fragments
         }
 
-        var i = text.search(" #");
+        var i = text.search("#");
         if (i !== -1) {
-            return text.substring(0, i)
+            return text.substring(0, i);
         }
 
-        i = text.search(this.continuationCharacter + "#");
-        if (i !== -1) {
-            return text.substring(0, i+1)
-        }
-
-        // default is no comments found
+        // no comment found
         return text;
     }
 
