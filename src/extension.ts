@@ -287,13 +287,32 @@ class RunLineInEditor {
             return this.continuationCharacter;  // don't let a whole line comment terminate a sequence of command fragments
         }
 
-        var i = text.search("#");
+        var i = text.indexOf("#");
         if (i !== -1) {
+            // account for hash characters that are embedded in strings in the JMESPath query
+            while (this.isEmbeddedInString(text, i)) {
+                i = text.indexOf("#", i + 1);  // find next #
+            }
             return text.substring(0, i);
         }
 
         // no comment found
         return text;
+    }
+
+    // true if the specified position is in a string literal (surrounded by single quotes)
+    private isEmbeddedInString(text: string, position: number) : boolean {
+        var stringStart = text.indexOf("'");  // start of string literal
+        if (stringStart !== -1) {
+            while (stringStart !== -1) {
+                var stringEnd = text.indexOf("'", stringStart + 1);  // end of string literal
+                if ((stringEnd !== -1) && (stringStart < position) && (stringEnd > position)) {
+                    return true;  // the given position is embedded in a string literal
+                }
+                stringStart = text.indexOf("'", stringEnd + 1);
+            }
+        }
+        return false;
     }
 
     private commandFinished(startTime: number) {
