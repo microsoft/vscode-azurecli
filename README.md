@@ -14,6 +14,10 @@ Create `.azcli` files and use these features:
 
 ## Release Notes
 
+### 0.5.0
+
+- PR [Support multiline commands when running in editor](https://github.com/Microsoft/vscode-azurecli/pull/61) by [@mburleigh](https://github.com/mburleigh).
+
 ### 0.4.6
 
 - PR [Add status bar item to indicate progress](https://github.com/Microsoft/vscode-azurecli/pull/56) by [@mburleigh](https://github.com/mburleigh).
