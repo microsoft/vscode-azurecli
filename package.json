@@ -99,7 +99,7 @@
           "scope": "resource",
           "description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor."
         },
-        "azureCLI.continuationCharacter": {
+        "azureCLI.lineContinuationCharacter": {
           "type": "string",
           "default": "",
           "scope": "resource",

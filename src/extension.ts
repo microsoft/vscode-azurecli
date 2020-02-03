@@ -174,7 +174,7 @@ class RunLineInEditor {
 
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
-        this.RefreshContinuationCharacter();
+        this.refreshContinuationCharacter();
         const command = this.getSelectedCommand(source);
         if (command.length > 0) {
             this.runningCommandCount += 1;
@@ -210,9 +210,9 @@ class RunLineInEditor {
         }
     }
 
-    private RefreshContinuationCharacter() {
+    private refreshContinuationCharacter() {
         // the continuation character setting can be changed after the extension is loaded
-        const settingsContinuationCharacter = workspace.getConfiguration('azureCLI', null).get<string>('continuationCharacter', "");
+        const settingsContinuationCharacter = workspace.getConfiguration('azureCLI', null).get<string>('lineContinuationCharacter', "");
         if (settingsContinuationCharacter.length > 0) {
             this.continuationCharacter = settingsContinuationCharacter;
         }
