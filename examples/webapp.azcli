@@ -1,5 +1,5 @@
 # Login and set default subscription
-az login 
+az login
 az account set --subscription "Try Out Subscription"
 
 # Create resource group
@@ -8,11 +8,14 @@ az configure --defaults group=tryout-group
 
 # Create web app
 az appservice plan create --name tryout-plan --is-linux --sku B2
-az webapp create --name tryout-web --plan tryout-plan 
+az webapp create --name tryout-web --plan tryout-plan --runtime "node|6.2"
 az configure --defaults web=tryout-web
 
 # Manual deployment from source repository
-az webapp deployment source config --repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" --branch master --manual-integration 
+az webapp deployment source config \
+	--repo-url "https://github.com/Azure-Samples/app-service-web-html-get-started.git" \
+	--branch master \
+	--manual-integration 
 # Or from docker image
 az webapp config container set --docker-custom-image-name tutum/hello-world
 az webapp browse

@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit,  } from 'vscode';
+import * as process from "process";
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
@@ -158,6 +159,8 @@ class RunLineInEditor {
     private statusBarSpinner = spinner();
     private hideStatusBarItemTimeout! : NodeJS.Timeout;
     private statusBarItemText : string = '';
+    // using backtick (`) as continuation character on Windows, backslash (\) on other systems
+    private continuationCharacter : string = process.platform === "win32" ? "`" : "\\";
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
@@ -166,56 +169,158 @@ class RunLineInEditor {
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
 
         this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-        this.disposables.push(this.commandRunningStatusBarItem);
+        this.disposables.push(this.commandRunningStatusBarItem);        
     }
 
     private runningCommandCount : number = 0;
     private run(source: TextEditor) {
-        this.runningCommandCount += 1;
-        const t0 = Date.now();
-        if (this.runningCommandCount === 1)
-        {
-            this.statusBarItemText = `Azure CLI: Waiting for response`;
-            this.statusBarUpdateInterval = setInterval(() => {
-                if (this.runningCommandCount === 1)
-                {
-                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
-                }
-                else
-                {
-                    this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
-                }
-            }, 50);
-        }
-        this.commandRunningStatusBarItem.show();
-        clearTimeout(this.hideStatusBarItemTimeout);
+        this.refreshContinuationCharacter();
+        const command = this.getSelectedCommand(source);
+        if (command.length > 0) {
+            this.runningCommandCount += 1;
+            const t0 = Date.now();
+            if (this.runningCommandCount === 1) {
+                this.statusBarItemText = `Azure CLI: Waiting for response`;
+                this.statusBarUpdateInterval = setInterval(() => {
+                    if (this.runningCommandCount === 1) {
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
+                    }
+                    else {
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner()}`;
+                    }
+                }, 50);
+            }
+            this.commandRunningStatusBarItem.show();
+            clearTimeout(this.hideStatusBarItemTimeout);
 
-        this.parsedResult = undefined;
-        this.query = undefined; // TODO
-        const cursor = source.selection.active;
-        const line = source.document.lineAt(cursor).text;
-        return this.findResultDocument()
-            .then(document => window.showTextDocument(document, ViewColumn.Two, true))
-            .then(target => replaceContent(target, JSON.stringify({ 'Running command': line }) + '\n')
-                .then(() => exec(line))
-                .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
-                .then(content => replaceContent(target, content)
-                        .then(() => this.parsedResult = JSON.parse(content))
-                        .then(undefined, err => {})
+            this.parsedResult = undefined;
+            this.query = undefined; // TODO
+            return this.findResultDocument()
+                .then(document => window.showTextDocument(document, ViewColumn.Two, true))
+                .then(target => replaceContent(target, JSON.stringify({ 'Running command': command }) + '\n')
+                    .then(() => exec(command))
+                    .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
+                    .then(content => replaceContent(target, content)
+                            .then(() => this.parsedResult = JSON.parse(content))
+                            .then(undefined, err => {})
+                    )
+                    .then(() => this.commandFinished(t0))
                 )
-                .then(() => this.commandFinished(t0))
-            )
-            .then(undefined, console.error);
+                .then(undefined, console.error);
+        }
     }
 
-    private commandFinished(startTime: number)
-    {
+    private refreshContinuationCharacter() {
+        // the continuation character setting can be changed after the extension is loaded
+        const settingsContinuationCharacter = workspace.getConfiguration('azureCLI', null).get<string>('lineContinuationCharacter', "");
+        if (settingsContinuationCharacter.length > 0) {
+            this.continuationCharacter = settingsContinuationCharacter;
+        }
+        else {
+            this.continuationCharacter = process.platform === "win32" ? "`" : "\\";
+        }
+    }
+
+    private getSelectedCommand(source: TextEditor) {
+        const commandPrefix = "az";
+
+        if (source.selection.isEmpty) {
+            var lineNumber = source.selection.active.line;
+            if (source.document.lineAt(lineNumber).text.length === 0) {
+                window.showInformationMessage<any>("Please put the cursor on a line that contains a command (or part of a command).");
+                return "";
+            }
+            
+            // look upwards find the start of the command (if necessary)
+            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith(commandPrefix)) {
+                lineNumber--;
+            }
+
+            // this will be the first (maybe only) line of the command
+            var command = this.stripComments(source.document.lineAt(lineNumber).text);
+
+            while (command.trim().endsWith(this.continuationCharacter)) {
+                // concatenate all lines into a single command
+                lineNumber ++;
+                command = command.trim().slice(0, -1) + this.stripComments(source.document.lineAt(lineNumber).text);
+            }
+            return command;
+        } 
+        else {
+            // execute only the selected text
+            const selectionStart = source.selection.start;
+            const selectionEnd = source.selection.end;
+            if (selectionStart.line === selectionEnd.line) {
+                // single line command
+                return this.stripComments(source.document.getText(new Range(selectionStart, selectionEnd)));
+            }
+            else {
+                // multiline command
+                command = this.stripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
+                for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
+                    if (command.trim().endsWith(this.continuationCharacter)) {
+                        command = command.trim().slice(0, -1);  // remove continuation character from command
+                    }
+
+                    var line = this.stripComments(source.document.lineAt(index).text);
+
+                    if (line.trim().toLowerCase().startsWith(commandPrefix)) {
+                        window.showErrorMessage<any>("Multiple command selection not supported");
+                        return "";
+                    }
+
+                    // append this line to the command string
+                    if (index === selectionEnd.line) {
+                        command = command + line.substring(0, selectionEnd.character);  // only append up to the end of the selection
+                    }
+                    else {
+                        command = command + line;
+                    }
+                }
+                return command;
+            }
+        }
+    }
+
+    private stripComments(text: string) {
+        if (text.trim().startsWith("#")) {
+            return this.continuationCharacter;  // don't let a whole line comment terminate a sequence of command fragments
+        }
+
+        var i = text.indexOf("#");
+        if (i !== -1) {
+            // account for hash characters that are embedded in strings in the JMESPath query
+            while (this.isEmbeddedInString(text, i)) {
+                i = text.indexOf("#", i + 1);  // find next #
+            }
+            return text.substring(0, i);
+        }
+
+        // no comment found
+        return text;
+    }
+
+    // true if the specified position is in a string literal (surrounded by single quotes)
+    private isEmbeddedInString(text: string, position: number) : boolean {
+        var stringStart = text.indexOf("'");  // start of string literal
+        if (stringStart !== -1) {
+            while (stringStart !== -1) {
+                var stringEnd = text.indexOf("'", stringStart + 1);  // end of string literal
+                if ((stringEnd !== -1) && (stringStart < position) && (stringEnd > position)) {
+                    return true;  // the given position is embedded in a string literal
+                }
+                stringStart = text.indexOf("'", stringEnd + 1);
+            }
+        }
+        return false;
+    }
+
+    private commandFinished(startTime: number) {
         this.runningCommandCount -= 1
         this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
-        if (this.runningCommandCount === 0)
-        {
+        if (this.runningCommandCount === 0) {
             clearInterval(this.statusBarUpdateInterval);
 
             // hide status bar item after 10 seconds to keep status bar uncluttered
