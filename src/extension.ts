@@ -120,18 +120,17 @@ class AzRecommendationProvider implements CompletionItemProvider {
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[] | CompletionList> {
         if (context.triggerKind != CompletionTriggerKind.TriggerCharacter) {
-            // request recommendation service only when a line has been input in full
             return;
         }
         console.log('trigger recommendation: line');
         const commandListArr: string[] = [];
         let line;
-        const executedCommand = []
+        const executedCommand = new Set()
         for (let i = 0; i < position.line && commandListArr.length < this.MAX_COMMAND_LIST_SIZE; i++) {
             line = document.lineAt(i).text;
             const command = AzRecommendationParser.parseLine(line)
             if (command != null && command.command.length > 0) {
-                executedCommand.push('az ' + command.command)
+                executedCommand.add('az ' + command.command)
                 commandListArr.push(JSON.stringify(command));
             }
         }
@@ -142,9 +141,9 @@ class AzRecommendationProvider implements CompletionItemProvider {
 
         const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends(commandListArr)
         if (currentRecommends == null) {
-            return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+            const items = this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
                 .then(completions => completions.map(({ description, executeIndex, nextCommandSet }) => {
-                    const item = new CompletionItem(description, CompletionItemKind.Operator);
+                    const item = new CompletionItem(description, CompletionItemKind.Module);
                     item.command = {
                         title: 'set current recommends',
                         command: 'ms-azurecli.setCurrentRecommends',
@@ -152,6 +151,7 @@ class AzRecommendationProvider implements CompletionItemProvider {
                     };
                     return item;
                 }));
+            return items;
         }
 
         const items: CompletionItem[] = []
@@ -168,11 +168,6 @@ class AzRecommendationProvider implements CompletionItemProvider {
             }
             item.insertText = new SnippetString(command);
             item.detail = nextCommand.example;
-            // item.command = {
-            //     title: 'post process of choosing scenario one command',
-            //     command: 'ms-azurecli.postProcessOfRecommend',
-            //     arguments: [index]
-            // };
             items.push(item);
         }
         const cleanItem = new CompletionItem('no more commands in this scenario are needed', CompletionItemKind.Event);

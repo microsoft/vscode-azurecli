@@ -11,7 +11,7 @@ export interface CommandInfo {
     arguments: string[],
     reason: string;
     example: string;
-    isExecuted: boolean | false
+    isExecuted: boolean | null
 }
 
 export interface RecommendationQuery {
@@ -35,7 +35,14 @@ export class RecommendService {
         let executeIndex = recommends.executeIndex;
         let nextCommandSet = [];
         for (let index of executeIndex) {
+            recommends.nextCommandSet[index].isExecuted = false;
             nextCommandSet.push(recommends.nextCommandSet[index]);
+        }
+        for (let command of recommends.nextCommandSet) {
+            if (command.isExecuted == null || command.isExecuted) {
+                command.isExecuted = true
+                nextCommandSet.push(command);
+            }
         }
         recommends.nextCommandSet = nextCommandSet;
         RecommendService.currentRecommends = recommends;
@@ -56,8 +63,24 @@ export class RecommendService {
         nextCommandSet.push(executedCommand)
     }
 
-    static preprocessRecommend(executedCommands: string[]){
-        
+    static preprocessRecommend(executedCommands: any){
+        if (RecommendService.currentRecommends == null) {
+            return;
+        }
+        let nextCommandSet = RecommendService.currentRecommends.nextCommandSet;
+        const unusedCommands = [];
+        const usedCommands = []
+        for (let command of nextCommandSet) {
+            if (executedCommands.has(command.command)) {
+                command.isExecuted = true;
+                usedCommands.push(command)
+            } else {
+                command.isExecuted = false;
+                unusedCommands.push(command)
+            }
+        }
+
+        RecommendService.currentRecommends.nextCommandSet = unusedCommands.concat(usedCommands);
     }
 
     async getRecommendation(commandList: string, onCancel: (handle: () => void) => void): Promise<Recommendation[]> {
