@@ -24,11 +24,23 @@ export class RecommendService {
 
     private static currentRecommends: Recommendation | null = null;
 
+    // the line on which the recommended scenarios are based
+    private static requestServiceLine: number = -1;
+    private static nextScenarios: Recommendation[] | null = null;
+
     constructor(private azService: AzService) {
     }
 
-    static getCurrentRecommends(commandList: string[]): Recommendation | null {
+    static isReadyToRequestService(currentLine: number) {
+        
+    }
+
+    static getCurrentRecommends(): Recommendation | null {
         return RecommendService.currentRecommends;
+    }
+
+    static getNextScenarios(): Recommendation[] | null {
+        return RecommendService.nextScenarios;
     }
 
     static setCurrentRecommends(recommends: Recommendation): void {
