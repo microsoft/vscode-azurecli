@@ -56,22 +56,6 @@ interface Message<T> {
     data: T;
 }
 
-export interface Recommendation {
-    description: string;
-    nextCommandSet: CommandInfo[]
-}
-
-export interface CommandInfo {
-    command: string,
-    reason: string;
-    example: string
-}
-
-export interface RecommendationQuery {
-    request: 'recommendation';
-    commandList: string;
-}
-
 export class AzService {
 
     private process: Promise<ChildProcess> | undefined;
@@ -107,19 +91,7 @@ export class AzService {
         }, onCancel);
     }
 
-    async getRecommendation(commandList: string, onCancel: (handle: () => void) => void): Promise<Recommendation[]> {
-        try {
-            return this.send<RecommendationQuery, Recommendation[]>({
-                request: 'recommendation',
-                commandList: commandList
-            }, onCancel);
-        } catch (err) {
-            console.error(err);
-            return [];
-        }
-    }
-
-    private async send<T, R>(data: T, onCancel?: (handle: () => void) => void): Promise<R> {
+    async send<T, R>(data: T, onCancel?: (handle: () => void) => void): Promise<R> {
         const process = await this.getProcess();
         return new Promise<R>((resolve, reject) => {
             if (onCancel) {

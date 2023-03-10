@@ -33,12 +33,14 @@ export function parseLine(line: string) {
     if (subcommand.length == 0) {
         return null;
     }
-    const json = JSON.stringify({
+
+    const command = {
         command: subcommand,
-        // arguments: args
-    })
+        arguments: args
+    }
+    const json = JSON.stringify(command)
     
-    return json
+    return command
 }
 
 

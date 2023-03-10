@@ -93,11 +93,12 @@ def get_info_of_one_scenario(s, index):
     arg_index = 1
     for next_command in s['nextCommandSet']:
         command = 'az ' + next_command['command']
-        for arg in next_command['arguments']:
-            command += ' ' + arg + '$' + str(arg_index)
-            arg_index += 1
+        # for arg in next_command['arguments']:
+        #     command += ' ' + arg + '$' + str(arg_index)
+        #     arg_index += 1
         command_info = {
             'command': command,
+            'arguments': next_command['arguments'],
             'reason': next_command['reason'],
             'example': next_command['example']
         }
@@ -105,6 +106,7 @@ def get_info_of_one_scenario(s, index):
 
     return {
         'description': description,
+        'executeIndex': s['executeIndex'],
         'nextCommandSet': next_command_set
     }
 
