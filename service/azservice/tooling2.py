@@ -156,13 +156,13 @@ def run_argument_value_completer(command, argument, cli_arguments):
         args = _to_argument_object(command, cli_arguments)
         _add_defaults(command, args)
         return argument.completer(prefix='', action=None, parsed_args=args)
-    except TypeError:
+    except Exception:
         try:
             return argument.completer(prefix='')
-        except TypeError:
+        except Exception:
             try:
                 return argument.completer()
-            except TypeError:
+            except Exception:
                 return None
 
 

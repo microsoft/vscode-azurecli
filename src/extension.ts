@@ -11,13 +11,13 @@ import { parse, findNode } from './parser';
 import { exec } from './utils';
 import * as spinner from 'elegant-spinner';
 
-import * as AzRecommendationParser from './recommendation/parser';
+import { RecommendParser } from './recommendation/parser';
 import { RecommendService, Recommendation } from './recommendation/RecommendService';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
     const recommendService = new RecommendService(azService);
-    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
+    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService, recommendService), ' '));
     context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzRecommendationProvider(recommendService), '\n'));
     context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
     const status = new StatusBarInfo(azService);
@@ -40,7 +40,7 @@ const completionKinds: Record<CompletionKind, CompletionItemKind> = {
 
 class AzCompletionItemProvider implements CompletionItemProvider {
 
-    constructor(private azService: AzService) {
+    constructor(private azService: AzService, private recommendService: RecommendService) {
     }
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
@@ -70,6 +70,16 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const argument = (/\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor) || [])[1];
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
+        if (argument != null && RecommendService.isReadyToRequestService(position.line)) {
+            // ready to request recommendation service
+            const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+            RecommendService.setCurrentLine(position.line);
+            this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested, true)
+                .then(recommendations => {
+                    console.log('setNextScenarios recommendations');
+                    RecommendService.setNextScenarios(recommendations);
+                });
+        }
         return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {}, token.onCancellationRequested)
             .then(completions => completions.map(({ name, kind, detail, documentation, snippet, sortText }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
@@ -113,8 +123,6 @@ class AzCompletionItemProvider implements CompletionItemProvider {
 
 class AzRecommendationProvider implements CompletionItemProvider {
 
-    private readonly MAX_COMMAND_LIST_SIZE = 30;
-
     constructor(private recommendService: RecommendService) {
     }
 
@@ -123,26 +131,13 @@ class AzRecommendationProvider implements CompletionItemProvider {
             return;
         }
         console.log('trigger recommendation: line');
-        const commandListArr: string[] = [];
-        let line;
-        const executedCommand = new Set()
-        for (let i = 0; i < position.line && commandListArr.length < this.MAX_COMMAND_LIST_SIZE; i++) {
-            line = document.lineAt(i).text;
-            const command = AzRecommendationParser.parseLine(line)
-            if (command != null && command.command.length > 0) {
-                executedCommand.add('az ' + command.command)
-                commandListArr.push(JSON.stringify(command));
-            }
-        }
-        if (commandListArr.length == 0) {
-            return;
-        }
-        const commandListJson = JSON.stringify(commandListArr)
 
-        const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends(commandListArr)
+        const { executedCommand: executedCommand, commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+        const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends()
         if (currentRecommends == null) {
-            const items = this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
-                .then(completions => completions.map(({ description, executeIndex, nextCommandSet }) => {
+            console.log('provideCompletionItems triggered ...');
+            return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+                .then(nextScenarios => nextScenarios.map(({ description, executeIndex, nextCommandSet }) => {
                     const item = new CompletionItem(description, CompletionItemKind.Module);
                     item.command = {
                         title: 'set current recommends',
@@ -151,7 +146,6 @@ class AzRecommendationProvider implements CompletionItemProvider {
                     };
                     return item;
                 }));
-            return items;
         }
 
         const items: CompletionItem[] = []

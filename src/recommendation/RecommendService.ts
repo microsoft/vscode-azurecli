@@ -19,7 +19,6 @@ export interface RecommendationQuery {
     commandList: string;
 }
 
-
 export class RecommendService {
 
     private static currentRecommends: Recommendation | null = null;
@@ -32,15 +31,19 @@ export class RecommendService {
     }
 
     static isReadyToRequestService(currentLine: number) {
-        
+        return RecommendService.requestServiceLine != currentLine; // RecommendService.isReInit && 
     }
 
     static getCurrentRecommends(): Recommendation | null {
         return RecommendService.currentRecommends;
     }
-
-    static getNextScenarios(): Recommendation[] | null {
-        return RecommendService.nextScenarios;
+    
+    static setNextScenarios(nextScenarios: Recommendation[]) {
+        RecommendService.nextScenarios = nextScenarios;
+    }
+    
+    static setCurrentLine(line: number) {
+        return RecommendService.requestServiceLine = line;
     }
 
     static setCurrentRecommends(recommends: Recommendation): void {
@@ -75,7 +78,7 @@ export class RecommendService {
         nextCommandSet.push(executedCommand)
     }
 
-    static preprocessRecommend(executedCommands: any){
+    static preprocessRecommend(executedCommands: Set<string>){
         if (RecommendService.currentRecommends == null) {
             return;
         }
@@ -95,12 +98,17 @@ export class RecommendService {
         RecommendService.currentRecommends.nextCommandSet = unusedCommands.concat(usedCommands);
     }
 
-    async getRecommendation(commandList: string, onCancel: (handle: () => void) => void): Promise<Recommendation[]> {
+    async getRecommendation(commandList: string, onCancel: (handle: () => void) => void, isRequestService?: boolean): Promise<Recommendation[]> {
         try {
-            return this.azService.send<RecommendationQuery, Recommendation[]>({
-                request: 'recommendation',
-                commandList: commandList
-            }, onCancel);
+            if (RecommendService.nextScenarios == null || isRequestService) {
+                console.log('request recommendation service');
+                return this.azService.send<RecommendationQuery, Recommendation[]>({
+                    request: 'recommendation',
+                    commandList: commandList
+                }, onCancel);
+            }
+            console.log('get next scenarios directly');
+            return RecommendService.nextScenarios;
         } catch (err) {
             console.error(err);
             return [];

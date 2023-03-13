@@ -5,6 +5,7 @@
 # --------------------------------------------------------------------------------------------
 from __future__ import print_function
 
+from concurrent.futures import ThreadPoolExecutor
 from sys import stdin, stdout, stderr
 import json
 import time
@@ -16,7 +17,7 @@ except ImportError:
 
 from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments, load_arguments, arguments_loaded
 
-from azservice.recommend_tooling import initialize as recommend_init, get_recommends
+from azservice.recommend_tooling import request_recommend_service
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -311,16 +312,7 @@ def get_options(options):
         option if isinstance(option, str) else
         option.target if hasattr(option, 'target') else
         None
-    for option in options ] if option ]
- 
-def get_recommendations(command_list):
-    recommends = []
-    from azure.cli.core.azclierror import RecommendationError
-    try:
-        recommends = get_recommends(command_list)
-    except RecommendationError as e:
-        log(e.error_msg)
-    return recommends   
+    for option in options ] if option ] 
 
 def log(message):
     print(message, file=stderr)
@@ -330,8 +322,6 @@ def main():
     start = time.time()
     initialize()
     if timings: print('initialize {} s'.format(time.time() - start), file=stderr)
-
-    recommend_init()
 
     start = time.time()
     command_table = load_command_table()
@@ -345,10 +335,6 @@ def main():
     snippets = get_snippets(command_table) if AUTOMATIC_SNIPPETS_ENABLED else []
     if timings: print('get_snippets {} s'.format(time.time() - start), file=stderr)
 
-    # start = time.time()
-    # recommend_set_cli_ctx(cli_ctx)
-    # if timings: print('recommend_set_cli_ctx {} s'.format(time.time() - start), file=stderr)
-
     def enqueue_output(input, queue):
         for line in iter(input.readline, b''):
             queue.put(line)
@@ -359,6 +345,8 @@ def main():
     thread = Thread(target=enqueue_output, args=(stdin, queue))
     thread.daemon = True
     thread.start()
+
+    recommend_executor = ThreadPoolExecutor(max_workers=1)
 
     bkg_start = time.time()
     keep_loading = True
@@ -387,8 +375,9 @@ def main():
             response_data = get_hover_text(group_index, command_table, request['data']['command'])
             if timings: print('get_hover_text {} s'.format(time.time() - start), file=stderr)
         elif request['data'].get('request') == 'recommendation':
-            response_data = get_recommendations(request['data']['commandList'])
-            if timings: print('get_recommendations {} s'.format(time.time() - start), file=stderr)
+            recommend_executor.submit(request_recommend_service, (request))
+            if timings: print('submit {} s'.format(time.time() - start), file=stderr)
+            continue
         else:
             response_data = get_completions(group_index, command_table, snippets, request['data'], True)
             if timings: print('get_completions {} s'.format(time.time() - start), file=stderr)

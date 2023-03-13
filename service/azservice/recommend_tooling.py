@@ -2,7 +2,7 @@ import hashlib
 import json
 import time
 from enum import Enum
-from sys import stderr
+from sys import stdout, stderr
 
 from azure.cli.core import get_default_cli, __version__ as version
 from azure.cli.core import telemetry
@@ -17,15 +17,40 @@ class RecommendType(int, Enum):
 
 
 cli_ctx = None
+
+
 def initialize():
     global cli_ctx
     cli_ctx = get_default_cli()
     print(f"version = {version}", file=stderr)
 
+
+def request_recommend_service(request):
+    start = time.time()
+    command_list = request['data']['commandList']
+    recommends = []
+    from azure.cli.core.azclierror import RecommendationError
+    try:
+        recommends = get_recommends(command_list)
+    except RecommendationError as e:
+        print(e.error_msg, file=stderr)
+
+    response = {
+            'sequence': request['sequence'],
+            'data': recommends
+    }
+    output = json.dumps(response)
+    stdout.write(output + '\n')
+    stdout.flush()
+    stderr.flush()
+    print('request_recommend_service {} s'.format(time.time() - start), file=stderr)
+
+
 def get_recommends(command_list):
     api_recommends = get_recommends_from_api(command_list, cli_ctx.config.getint('next', 'num_limit', fallback=5))
     recommends = get_scenarios_info(api_recommends)
     return recommends
+
 
 def get_recommends_from_api(command_list, top_num=5):
     """query next command from web api"""
@@ -42,7 +67,7 @@ def get_recommends_from_api(command_list, top_num=5):
         "command_list": command_list,
         "type": type,
         "top_num": top_num,
-        'cli_version': version, 
+        'cli_version': version,
         'user_id': hashed_user_id
     }
 
@@ -75,6 +100,7 @@ def get_recommends_from_api(command_list, top_num=5):
 
     return recommends
 
+
 def get_scenarios_info(recommends):
     scenarios = get_scenarios(recommends) or []
     scenarios_info = []
@@ -82,6 +108,7 @@ def get_scenarios_info(recommends):
     for idx, s in enumerate(scenarios):
         scenarios_info.append(get_info_of_one_scenario(s, idx))
     return scenarios_info
+
 
 def get_info_of_one_scenario(s, index):
     idx_display = f'[{index + 1}]'
@@ -109,6 +136,7 @@ def get_info_of_one_scenario(s, index):
         'executeIndex': s['executeIndex'],
         'nextCommandSet': next_command_set
     }
+
 
 def get_scenarios(recommends):
     return [rec for rec in recommends if rec['type'] == RecommendType.Scenario]
