@@ -127,7 +127,7 @@ class AzRecommendationProvider implements CompletionItemProvider {
     }
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[] | CompletionList> {
-        if (context.triggerKind != CompletionTriggerKind.TriggerCharacter) {
+        if (context.triggerKind != CompletionTriggerKind.TriggerCharacter && document.lineAt(position.line).text.trim().length == 0) {
             return;
         }
         console.log('trigger recommendation: line');

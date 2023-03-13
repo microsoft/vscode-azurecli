@@ -19,6 +19,8 @@ from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, 
 
 from azservice.recommend_tooling import request_recommend_service
 
+from azservice.output_tool import flush_output
+
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
 TWO_SEGMENTS_COMPLETION_ENABLED = False # Adds 'webapp create', 'appservice plan', etc. as proposals.
@@ -387,9 +389,7 @@ def main():
             'data': response_data
         }
         output = json.dumps(response)
-        stdout.write(output + '\n')
-        stdout.flush()
-        stderr.flush()
+        flush_output(output)
 
 main()
 
