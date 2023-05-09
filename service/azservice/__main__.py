@@ -17,9 +17,7 @@ except ImportError:
 
 from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments, load_arguments, arguments_loaded
 
-from azservice.recommend_tooling import request_recommend_service
-
-from azservice.output_tool import flush_output
+from azservice.recommend_tooling import request_recommend_service, init as recommend_init
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -323,6 +321,7 @@ def main():
     timings = True
     start = time.time()
     initialize()
+    recommend_init()
     if timings: print('initialize {} s'.format(time.time() - start), file=stderr)
 
     start = time.time()
@@ -389,7 +388,9 @@ def main():
             'data': response_data
         }
         output = json.dumps(response)
-        flush_output(output)
+        stdout.write(output + '\n')
+        stdout.flush()
+        stderr.flush()
 
 main()
 

@@ -4,11 +4,11 @@ import time
 from enum import Enum
 from sys import stdout, stderr
 
-from azure.cli.core import get_default_cli, __version__ as version
+from azure.cli.core import __version__ as version
 from azure.cli.core import telemetry
 from azure.cli.core.azclierror import RecommendationError
 
-from azservice.output_tool import flush_output
+from azservice.tooling2 import cli_ctx
 
 class RecommendType(int, Enum):
     All = 1
@@ -16,21 +16,13 @@ class RecommendType(int, Enum):
     Command = 3
     Scenario = 4
 
-
-cli_ctx
-
-
-def initialize():
+cli_ctx = None
+def init():
     global cli_ctx
-    cli_ctx = get_default_cli()
-    print(f"version = {version}", file=stderr)
-
+    from azservice.tooling2 import cli_ctx
 
 def request_recommend_service(request):
     start = time.time()
-
-    # if cli_ctx is None:
-    #     initialize()
 
     command_list = request['data']['commandList']
     recommends = []
@@ -45,12 +37,13 @@ def request_recommend_service(request):
             'data': recommends
     }
     output = json.dumps(response)
-    flush_output(output)
+    stdout.write(output + '\n')
+    stdout.flush()
+    stderr.flush()
     print('request_recommend_service {} s'.format(time.time() - start), file=stderr)
 
 
 def get_recommends(command_list):
-    # global cli_ctx
     print('cli_ctx - {}'.format(cli_ctx), file=stderr)
     api_recommends = get_recommends_from_api(command_list, cli_ctx.config.getint('next', 'num_limit', fallback=5))
     recommends = get_scenarios_info(api_recommends)
