@@ -11,8 +11,8 @@ import { parse, findNode } from './parser';
 import { exec } from './utils';
 import * as spinner from 'elegant-spinner';
 
-import { RecommendParser } from './recommendation/parser';
-import { RecommendService, Recommendation } from './recommendation/RecommendService';
+import { RecommendParser } from './recommend/parser';
+import { RecommendService, Recommendation } from './recommend/RecommendService';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
