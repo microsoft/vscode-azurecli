@@ -138,7 +138,8 @@ class AzRecommendationProvider implements CompletionItemProvider {
             console.log('provideCompletionItems triggered ...');
             return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
                 .then(nextScenarios => nextScenarios.map(({ description, executeIndex, nextCommandSet }) => {
-                    const item = new CompletionItem(description, CompletionItemKind.Module);
+                    const item = new CompletionItem(description, CompletionItemKind.Unit);
+                    item.insertText = '';
                     item.command = {
                         title: 'set current recommends',
                         command: 'ms-azurecli.setCurrentRecommends',

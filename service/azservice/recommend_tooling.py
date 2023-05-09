@@ -17,7 +17,7 @@ class RecommendType(int, Enum):
     Scenario = 4
 
 
-cli_ctx = None
+cli_ctx
 
 
 def initialize():
@@ -29,8 +29,8 @@ def initialize():
 def request_recommend_service(request):
     start = time.time()
 
-    if cli_ctx is None:
-        initialize()
+    # if cli_ctx is None:
+    #     initialize()
 
     command_list = request['data']['commandList']
     recommends = []
@@ -50,6 +50,8 @@ def request_recommend_service(request):
 
 
 def get_recommends(command_list):
+    # global cli_ctx
+    print('cli_ctx - {}'.format(cli_ctx), file=stderr)
     api_recommends = get_recommends_from_api(command_list, cli_ctx.config.getint('next', 'num_limit', fallback=5))
     recommends = get_scenarios_info(api_recommends)
     return recommends
