@@ -25,9 +25,9 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
     context.subscriptions.push(commands.registerCommand('ms-azurecli.installAzureCLI', installAzureCLI));
-    context.subscriptions.push(commands.registerCommand('ms-azurecli.setCurrentRecommends', RecommendService.setCurrentRecommends));
-    context.subscriptions.push(commands.registerCommand('ms-azurecli.initCurrentRecommends', RecommendService.initCurrentRecommends));
-    context.subscriptions.push(commands.registerCommand('ms-azurecli.postProcessOfRecommend', RecommendService.postProcessOfRecommend));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.setCurrentRecommends', RecommendService.setCurrentRecommends));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.initCurrentRecommends', RecommendService.initCurrentRecommends));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.postProcessOfRecommend', RecommendService.postProcessOfRecommend));
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -73,11 +73,11 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         if (argument != null && RecommendService.isReadyToRequestService(position.line)) {
             // ready to request recommendation service
             const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
-            RecommendService.setCurrentLine(position.line);
+            RecommendService.setLine(position.line);
             this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested, true)
                 .then(recommendations => {
                     console.log('setNextScenarios recommendations');
-                    RecommendService.setNextScenarios(recommendations);
+                    RecommendService.setScenarios(recommendations);
                 });
         }
         return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {}, token.onCancellationRequested)
@@ -132,49 +132,88 @@ class AzRecommendationProvider implements CompletionItemProvider {
         }
         console.log('trigger recommendation: line');
 
-        const { executedCommand: executedCommand, commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
-        const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends()
-        if (currentRecommends == null) {
+        // const { executedCommand: executedCommand, commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+        // const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends()
+        // if (currentRecommends == null) {
+        //     console.log('provideCompletionItems triggered ...');
+        //     return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+        //         .then(nextScenarios => nextScenarios.map(({ description, executeIndex, nextCommandSet }) => {
+        //             const item = new CompletionItem(description, CompletionItemKind.Unit);
+        //             item.insertText = '';
+        //             item.command = {
+        //                 title: 'set current recommends',
+        //                 command: 'ms-azurecli.setCurrentRecommends',
+        //                 arguments: [{ description, executeIndex, nextCommandSet }]
+        //             };
+        //             return item;
+        //         }));
+        // }
+
+        const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+        const scenarios: Recommendation[] | null = RecommendService.popScenarios();
+        if (scenarios == null) {
             console.log('provideCompletionItems triggered ...');
             return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
-                .then(nextScenarios => nextScenarios.map(({ description, executeIndex, nextCommandSet }) => {
-                    const item = new CompletionItem(description, CompletionItemKind.Unit);
-                    item.insertText = '';
-                    item.command = {
-                        title: 'set current recommends',
-                        command: 'ms-azurecli.setCurrentRecommends',
-                        arguments: [{ description, executeIndex, nextCommandSet }]
-                    };
-                    return item;
+                .then(nextScenarios => nextScenarios.map((scenario) => {
+                    return this.processItem(scenario);
                 }));
         }
 
-        const items: CompletionItem[] = []
-        RecommendService.preprocessRecommend(executedCommand);
-        for (let index = 0; index < currentRecommends.nextCommandSet.length; index++) {
-            const nextCommand = currentRecommends.nextCommandSet[index]
-            const label = (!nextCommand.isExecuted ? `[${index + 1}] ` : '[executed] ') + nextCommand.reason;
-            const item = new CompletionItem(label, CompletionItemKind.Function);
-            let command = "\n# " + nextCommand.reason + '\n# example: ' + nextCommand.example + '\n' + nextCommand.command;
-            let arg_index = 1;
-            for (const arg of nextCommand.arguments) {
-                command += ' ' + arg + '$' + arg_index
-                arg_index += 1
-            }
-            item.insertText = new SnippetString(command);
-            item.detail = nextCommand.example;
-            items.push(item);
+        const items: CompletionItem[] = [];
+        for (let scenarioIndex = 0; scenarioIndex < scenarios.length; scenarioIndex++) {
+            items.push(this.processItem(scenarios[scenarioIndex]));
         }
-        const cleanItem = new CompletionItem('no more commands in this scenario are needed', CompletionItemKind.Event);
-        cleanItem.command = {
-            title: 'clean current recommends',
-            command: 'ms-azurecli.initCurrentRecommends'
-        };
-        cleanItem.insertText = '\n'
-        items.push(cleanItem)
         return items;
+
+
+        // const items: CompletionItem[] = []
+        // RecommendService.preprocessRecommend(executedCommand);
+        // for (let index = 0; index < currentRecommends.nextCommandSet.length; index++) {
+        //     const nextCommand = currentRecommends.nextCommandSet[index]
+        //     const label = (!nextCommand.isExecuted ? `[${index + 1}] ` : '[executed] ') + nextCommand.reason;
+        //     const item = new CompletionItem(label, CompletionItemKind.Function);
+        //     let command = "\n# " + nextCommand.reason + '\n# example: ' + nextCommand.example + '\n' + nextCommand.command;
+        //     let arg_index = 1;
+        //     for (const arg of nextCommand.arguments) {
+        //         command += ' ' + arg + '$' + arg_index
+        //         arg_index += 1
+        //     }
+        //     item.insertText = new SnippetString(command);
+        //     item.detail = nextCommand.example;
+        //     items.push(item);
+        // }
+        // const cleanItem = new CompletionItem('no more commands in this scenario are needed', CompletionItemKind.Event);
+        // cleanItem.command = {
+        //     title: 'clean current recommends',
+        //     command: 'ms-azurecli.initCurrentRecommends'
+        // };
+        // cleanItem.insertText = '\n'
+        // items.push(cleanItem)
+        // return items;
     }
 
+    processItem(scenario: Recommendation): CompletionItem {
+        const item = new CompletionItem(scenario.description, CompletionItemKind.Unit);
+
+        let insertText = "";
+        let argIndex = 1;
+        for (let commandIndex = 0; commandIndex < scenario.nextCommandSet.length; commandIndex++) {
+            const command = scenario.nextCommandSet[commandIndex];
+            insertText += "\n# " + command.reason + '\n# example: ' + command.example + '\n';
+            if (scenario.executeIndex.indexOf(commandIndex) < 0) {
+                insertText += '# ';
+            }
+            insertText += command.command;
+            for (const arg of command.arguments) {
+                insertText += ' ' + arg + '$' + argIndex;
+                argIndex++;
+            }
+            insertText += '\n'
+        }
+
+        item.insertText = new SnippetString(insertText);
+        return item;
+    }
 }
 
 class AzHoverProvider implements HoverProvider {
