@@ -74,7 +74,7 @@ class AzCompletionItemProvider implements CompletionItemProvider {
             // ready to request recommendation service
             const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
             RecommendService.setLine(position.line);
-            this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested, true)
+            this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
                 .then(recommendations => {
                     console.log('setNextScenarios recommendations');
                     RecommendService.setScenarios(recommendations);
@@ -198,17 +198,36 @@ class AzRecommendationProvider implements CompletionItemProvider {
         let insertText = "";
         let argIndex = 1;
         for (let commandIndex = 0; commandIndex < scenario.nextCommandSet.length; commandIndex++) {
+            // const command = scenario.nextCommandSet[commandIndex];
+            // insertText += "\n# " + command.reason + '\n# example: ' + command.example + '\n';
+            // if (scenario.executeIndex.indexOf(commandIndex) < 0) {
+            //     insertText += '# ';
+            // }
+            // insertText += command.command;
+            // for (const arg of command.arguments) {
+            //     insertText += ' ' + arg + '$' + argIndex;
+            //     argIndex++;
+            // }
+            // insertText += '\n'
+
+
+
             const command = scenario.nextCommandSet[commandIndex];
-            insertText += "\n# " + command.reason + '\n# example: ' + command.example + '\n';
+            insertText += "\n# " + command.reason;
             if (scenario.executeIndex.indexOf(commandIndex) < 0) {
-                insertText += '# ';
+                insertText += ' (has been input)\n' + '# ';
+            } else{
+                insertText += '\n';
             }
-            insertText += command.command;
-            for (const arg of command.arguments) {
-                insertText += ' ' + arg + '$' + argIndex;
-                argIndex++;
-            }
-            insertText += '\n'
+
+            insertText += RecommendParser.formatRecommendSample(command.example) + '\n';
+            
+            // insertText += command.command;
+            // for (const arg of command.arguments) {
+            //     insertText += ' ' + arg + '$' + argIndex;
+            //     argIndex++;
+            // }
+            // insertText += '\n'
         }
 
         item.insertText = new SnippetString(insertText);

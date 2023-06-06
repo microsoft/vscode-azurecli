@@ -115,12 +115,8 @@ def get_info_of_one_scenario(s, index):
     description = f'{idx_display} {scenario_desc} ({command_size})'
 
     next_command_set = []
-    arg_index = 1
     for next_command in s['nextCommandSet']:
-        command = 'az ' + next_command['command']
         command_info = {
-            'command': command,
-            'arguments': next_command['arguments'],
             'reason': next_command['reason'],
             'example': next_command['example']
         }

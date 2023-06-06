@@ -7,8 +7,6 @@ export interface Recommendation {
 }
 
 export interface CommandInfo {
-    command: string,
-    arguments: string[],
     reason: string;
     example: string;
 }
@@ -30,13 +28,13 @@ export class RecommendService {
     }
 
     static isReadyToRequestService(currentLine: number) {
-        return RecommendService.scenarios == null || currentLine != RecommendService.line; // RecommendService.isReInit && 
+        return RecommendService.scenarios == null || currentLine != RecommendService.line;
     }
 
     // static getCurrentRecommends(): Recommendation | null {
     //     return RecommendService.currentRecommends;
     // }
-    
+
     static setScenarios(nextScenarios: Recommendation[]) {
         RecommendService.scenarios = nextScenarios;
     }
@@ -46,7 +44,7 @@ export class RecommendService {
         RecommendService.scenarios = null;
         return scenarios;
     }
-    
+
     static setLine(line: number) {
         return RecommendService.line = line;
     }
@@ -103,17 +101,13 @@ export class RecommendService {
     //     RecommendService.currentRecommends.nextCommandSet = unusedCommands.concat(usedCommands);
     // }
 
-    async getRecommendation(commandList: string, onCancel: (handle: () => void) => void, isRequestService?: boolean): Promise<Recommendation[]> {
+    async getRecommendation(commandList: string, onCancel: (handle: () => void) => void): Promise<Recommendation[]> {
         try {
-            if (RecommendService.scenarios == null || isRequestService) {
-                console.log('request recommendation service');
-                return this.azService.send<RecommendationQuery, Recommendation[]>({
-                    request: 'recommendation',
-                    commandList: commandList
-                }, onCancel);
-            }
-            console.log('get next scenarios directly');
-            return RecommendService.scenarios;
+            console.log('request recommendation service');
+            return this.azService.send<RecommendationQuery, Recommendation[]>({
+                request: 'recommendation',
+                commandList: commandList
+            }, onCancel);
         } catch (err) {
             console.error(err);
             return [];
