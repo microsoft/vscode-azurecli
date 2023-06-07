@@ -196,7 +196,8 @@ class AzRecommendationProvider implements CompletionItemProvider {
         const item = new CompletionItem(scenario.description, CompletionItemKind.Unit);
 
         let insertText = "";
-        let argIndex = 1;
+        const commentTag = " (comment it since it already exists in script)";
+        // let argIndex = 1;
         for (let commandIndex = 0; commandIndex < scenario.nextCommandSet.length; commandIndex++) {
             // const command = scenario.nextCommandSet[commandIndex];
             // insertText += "\n# " + command.reason + '\n# example: ' + command.example + '\n';
@@ -215,7 +216,7 @@ class AzRecommendationProvider implements CompletionItemProvider {
             const command = scenario.nextCommandSet[commandIndex];
             insertText += "\n# " + command.reason;
             if (scenario.executeIndex.indexOf(commandIndex) < 0) {
-                insertText += ' (has been input)\n' + '# ';
+                insertText += commentTag + '\n# ';
             } else{
                 insertText += '\n';
             }
