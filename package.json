@@ -14,16 +14,12 @@
     "url": "https://github.com/Microsoft/vscode-azurecli/issues"
   },
   "engines": {
-    "vscode": "^1.35.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "Programming Languages",
     "Snippets",
     "Azure"
-  ],
-  "activationEvents": [
-    "onLanguage:azcli",
-    "onCommand:ms-azurecli.installAzureCLI"
   ],
   "main": "./out/src/extension",
   "contributes": {
