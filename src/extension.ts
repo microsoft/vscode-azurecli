@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit,  } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, CompletionContext, CompletionTriggerKind, window, workspace, env, Uri, WorkspaceEdit } from 'vscode';
 import * as process from "process";
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
@@ -11,15 +11,23 @@ import { parse, findNode } from './parser';
 import { exec } from './utils';
 import * as spinner from 'elegant-spinner';
 
+import { RecommendParser } from './recommend/parser';
+import { RecommendService, Recommendation } from './recommend/RecommendService';
+
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
-    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
+    const recommendService = new RecommendService(azService);
+    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService, recommendService), ' '));
+    context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzRecommendationProvider(recommendService), '\n'));
     context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
     const status = new StatusBarInfo(azService);
     context.subscriptions.push(status);
     context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
     context.subscriptions.push(commands.registerCommand('ms-azurecli.installAzureCLI', installAzureCLI));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.setCurrentRecommends', RecommendService.setCurrentRecommends));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.initCurrentRecommends', RecommendService.initCurrentRecommends));
+    // context.subscriptions.push(commands.registerCommand('ms-azurecli.postProcessOfRecommend', RecommendService.postProcessOfRecommend));
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
@@ -32,18 +40,22 @@ const completionKinds: Record<CompletionKind, CompletionItemKind> = {
 
 class AzCompletionItemProvider implements CompletionItemProvider {
 
-    constructor(private azService: AzService) {
+    constructor(private azService: AzService, private recommendService: RecommendService) {
     }
 
     provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken): ProviderResult<CompletionItem[] | CompletionList> {
+        console.log('trigger-----------------');
+
         const line = document.lineAt(position).text;
         const parsed = parse(line);
         const start = parsed.subcommand[0];
         if (start && start.offset + start.length < position.character && start.text !== 'az') {
             return;
         }
+        // find keyword not input completely
         const node = findNode(parsed, position.character - 1);
         if (node && node.kind === 'comment') {
+            // would be comment later input, ignore
             return;
         }
         // TODO: Use the above instead of parsing again.
@@ -58,6 +70,16 @@ class AzCompletionItemProvider implements CompletionItemProvider {
         const argument = (/\s(--?[^\s]+)\s+[^-\s]*$/.exec(upToCursor) || [])[1];
         const prefix = (/(^|\s)([^\s]*)$/.exec(upToCursor) || [])[2];
         const lead = /^-*/.exec(prefix)![0];
+        if (argument != null && RecommendService.isReadyToRequestService(position.line)) {
+            // ready to request recommendation service
+            const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+            RecommendService.setLine(position.line);
+            this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+                .then(recommendations => {
+                    console.log('setNextScenarios recommendations');
+                    RecommendService.setScenarios(recommendations);
+                });
+        }
         return this.azService.getCompletions(subcommand[0] === 'az' ? { subcommand: subcommand.slice(1).join(' '), argument, arguments: args } : {}, token.onCancellationRequested)
             .then(completions => completions.map(({ name, kind, detail, documentation, snippet, sortText }) => {
                 const item = new CompletionItem(name, completionKinds[kind]);
@@ -96,6 +118,121 @@ class AzCompletionItemProvider implements CompletionItemProvider {
             }
         }
         return args;
+    }
+}
+
+class AzRecommendationProvider implements CompletionItemProvider {
+
+    constructor(private recommendService: RecommendService) {
+    }
+
+    provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken, context: CompletionContext): ProviderResult<CompletionItem[] | CompletionList> {
+        if (context.triggerKind != CompletionTriggerKind.TriggerCharacter && document.lineAt(position.line).text.trim().length == 0) {
+            return;
+        }
+        console.log('trigger recommendation: line');
+
+        // const { executedCommand: executedCommand, commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+        // const currentRecommends: Recommendation | null = RecommendService.getCurrentRecommends()
+        // if (currentRecommends == null) {
+        //     console.log('provideCompletionItems triggered ...');
+        //     return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+        //         .then(nextScenarios => nextScenarios.map(({ description, executeIndex, nextCommandSet }) => {
+        //             const item = new CompletionItem(description, CompletionItemKind.Unit);
+        //             item.insertText = '';
+        //             item.command = {
+        //                 title: 'set current recommends',
+        //                 command: 'ms-azurecli.setCurrentRecommends',
+        //                 arguments: [{ description, executeIndex, nextCommandSet }]
+        //             };
+        //             return item;
+        //         }));
+        // }
+
+        const { commandListJson: commandListJson } = RecommendParser.parseLines(document, position);
+        const scenarios: Recommendation[] | null = RecommendService.popScenarios();
+        if (scenarios == null) {
+            console.log('provideCompletionItems triggered ...');
+            return this.recommendService.getRecommendation(commandListJson, token.onCancellationRequested)
+                .then(nextScenarios => nextScenarios.map((scenario) => {
+                    return this.processItem(scenario);
+                }));
+        }
+
+        const items: CompletionItem[] = [];
+        for (let scenarioIndex = 0; scenarioIndex < scenarios.length; scenarioIndex++) {
+            items.push(this.processItem(scenarios[scenarioIndex]));
+        }
+        return items;
+
+
+        // const items: CompletionItem[] = []
+        // RecommendService.preprocessRecommend(executedCommand);
+        // for (let index = 0; index < currentRecommends.nextCommandSet.length; index++) {
+        //     const nextCommand = currentRecommends.nextCommandSet[index]
+        //     const label = (!nextCommand.isExecuted ? `[${index + 1}] ` : '[executed] ') + nextCommand.reason;
+        //     const item = new CompletionItem(label, CompletionItemKind.Function);
+        //     let command = "\n# " + nextCommand.reason + '\n# example: ' + nextCommand.example + '\n' + nextCommand.command;
+        //     let arg_index = 1;
+        //     for (const arg of nextCommand.arguments) {
+        //         command += ' ' + arg + '$' + arg_index
+        //         arg_index += 1
+        //     }
+        //     item.insertText = new SnippetString(command);
+        //     item.detail = nextCommand.example;
+        //     items.push(item);
+        // }
+        // const cleanItem = new CompletionItem('no more commands in this scenario are needed', CompletionItemKind.Event);
+        // cleanItem.command = {
+        //     title: 'clean current recommends',
+        //     command: 'ms-azurecli.initCurrentRecommends'
+        // };
+        // cleanItem.insertText = '\n'
+        // items.push(cleanItem)
+        // return items;
+    }
+
+    processItem(scenario: Recommendation): CompletionItem {
+        const item = new CompletionItem(scenario.description, CompletionItemKind.Unit);
+
+        let insertText = "";
+        const commentTag = " (comment it since it already exists in script)";
+        // let argIndex = 1;
+        for (let commandIndex = 0; commandIndex < scenario.nextCommandSet.length; commandIndex++) {
+            // const command = scenario.nextCommandSet[commandIndex];
+            // insertText += "\n# " + command.reason + '\n# example: ' + command.example + '\n';
+            // if (scenario.executeIndex.indexOf(commandIndex) < 0) {
+            //     insertText += '# ';
+            // }
+            // insertText += command.command;
+            // for (const arg of command.arguments) {
+            //     insertText += ' ' + arg + '$' + argIndex;
+            //     argIndex++;
+            // }
+            // insertText += '\n'
+
+
+
+            const command = scenario.nextCommandSet[commandIndex];
+            insertText += "\n# " + command.reason;
+            if (scenario.executeIndex.indexOf(commandIndex) < 0) {
+                insertText += commentTag + '\n# ';
+            } else{
+                insertText += '\n';
+            }
+
+            insertText += RecommendParser.formatRecommendSample(command.example) + '\n';
+            
+            // insertText += command.command;
+            // for (const arg of command.arguments) {
+            //     insertText += ' ' + arg + '$' + argIndex;
+            //     argIndex++;
+            // }
+            // insertText += '\n'
+        }
+
+        item.insertText = new SnippetString(insertText);
+        return item;
     }
 }
 
@@ -157,10 +294,10 @@ class RunLineInEditor {
     private commandRunningStatusBarItem: StatusBarItem;
     private statusBarUpdateInterval!: NodeJS.Timer;
     private statusBarSpinner = spinner();
-    private hideStatusBarItemTimeout! : NodeJS.Timeout;
-    private statusBarItemText : string = '';
+    private hideStatusBarItemTimeout!: NodeJS.Timeout;
+    private statusBarItemText: string = '';
     // using backtick (`) as continuation character on Windows, backslash (\) on other systems
-    private continuationCharacter : string = process.platform === "win32" ? "`" : "\\";
+    private continuationCharacter: string = process.platform === "win32" ? "`" : "\\";
 
     constructor(private status: StatusBarInfo) {
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
@@ -169,10 +306,10 @@ class RunLineInEditor {
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
 
         this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-        this.disposables.push(this.commandRunningStatusBarItem);        
+        this.disposables.push(this.commandRunningStatusBarItem);
     }
 
-    private runningCommandCount : number = 0;
+    private runningCommandCount: number = 0;
     private run(source: TextEditor) {
         this.refreshContinuationCharacter();
         const command = this.getSelectedCommand(source);
@@ -201,8 +338,8 @@ class RunLineInEditor {
                     .then(() => exec(command))
                     .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
                     .then(content => replaceContent(target, content)
-                            .then(() => this.parsedResult = JSON.parse(content))
-                            .then(undefined, err => {})
+                        .then(() => this.parsedResult = JSON.parse(content))
+                        .then(undefined, err => { })
                     )
                     .then(() => this.commandFinished(t0))
                 )
@@ -230,9 +367,9 @@ class RunLineInEditor {
                 window.showInformationMessage<any>("Please put the cursor on a line that contains a command (or part of a command).");
                 return "";
             }
-            
+
             // look upwards find the start of the command (if necessary)
-            while(!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith(commandPrefix)) {
+            while (!source.document.lineAt(lineNumber).text.trim().toLowerCase().startsWith(commandPrefix)) {
                 lineNumber--;
             }
 
@@ -241,11 +378,11 @@ class RunLineInEditor {
 
             while (command.trim().endsWith(this.continuationCharacter)) {
                 // concatenate all lines into a single command
-                lineNumber ++;
+                lineNumber++;
                 command = command.trim().slice(0, -1) + this.stripComments(source.document.lineAt(lineNumber).text);
             }
             return command;
-        } 
+        }
         else {
             // execute only the selected text
             const selectionStart = source.selection.start;
@@ -257,7 +394,7 @@ class RunLineInEditor {
             else {
                 // multiline command
                 command = this.stripComments(source.document.lineAt(selectionStart.line).text.substring(selectionStart.character));
-                for (let index = selectionStart.line+1; index <= selectionEnd.line; index++) {
+                for (let index = selectionStart.line + 1; index <= selectionEnd.line; index++) {
                     if (command.trim().endsWith(this.continuationCharacter)) {
                         command = command.trim().slice(0, -1);  // remove continuation character from command
                     }
@@ -301,7 +438,7 @@ class RunLineInEditor {
     }
 
     // true if the specified position is in a string literal (surrounded by single quotes)
-    private isEmbeddedInString(text: string, position: number) : boolean {
+    private isEmbeddedInString(text: string, position: number): boolean {
         var stringStart = text.indexOf("'");  // start of string literal
         if (stringStart !== -1) {
             while (stringStart !== -1) {
@@ -376,9 +513,9 @@ class RunLineInEditor {
                     replaceContent(resultEditor, JSON.stringify(result, null, '    '))
                         .then(undefined, console.error);
                 } catch (err) {
-                    if (!(err && err.name === 'ParserError')) {
-                        // console.error(err); Ignore because jmespath sometimes fails on partial queries.
-                    }
+                    // if (!(err && err.name === 'ParserError')) {
+                    //     // console.error(err); Ignore because jmespath sometimes fails on partial queries.
+                    // }
                 }
             }
         }

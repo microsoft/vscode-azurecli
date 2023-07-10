@@ -5,6 +5,7 @@
 # --------------------------------------------------------------------------------------------
 from __future__ import print_function
 
+from concurrent.futures import ThreadPoolExecutor
 from sys import stdin, stdout, stderr
 import json
 import time
@@ -15,6 +16,8 @@ except ImportError:
     from queue import Queue, Empty # python 3.x
 
 from azservice.tooling import GLOBAL_ARGUMENTS, initialize, load_command_table, get_help, get_current_subscription, get_configured_defaults, get_defaults, is_required, run_argument_value_completer, get_arguments, load_arguments, arguments_loaded
+
+from azservice.recommend_tooling import request_recommend_service, init as recommend_init
 
 NO_AZ_PREFIX_COMPLETION_ENABLED = True # Adds proposals without 'az' as prefix to trigger, 'az' is then inserted as part of the completion.
 AUTOMATIC_SNIPPETS_ENABLED = True # Adds snippet proposals derived from the command table
@@ -29,6 +32,7 @@ AZ_COMPLETION = {
 
 def get_group_index(command_table):
     index = { '': [], '-': [] }
+    # build subgroup tree
     for command in command_table.values():
         parts = command.name.split()
         len_parts = len(parts)
@@ -116,14 +120,18 @@ def add_command_documentation(completion, command):
 
 def get_completions(group_index, command_table, snippets, query, verbose=False):
     if 'argument' in query:
+        # input commands finished and begin to input argument
         return get_argument_value_completions(command_table, query, verbose)
     if 'subcommand' not in query:
+        # provide subgroup and required arguments completions
         return get_snippet_completions(command_table, snippets) + get_prefix_command_completions(group_index, command_table) + [AZ_COMPLETION]
     command_name = query['subcommand']
     if command_name in command_table:
+        # input commands finished
         return get_argument_name_completions(command_table, query) + \
             get_global_argument_name_completions(query)
     if command_name in group_index:
+        # input commands not finished
         return get_command_completions(group_index, command_table, command_name)
     if verbose: print('Subcommand not found ({})'.format(command_name), file=stderr)
     return []
@@ -304,12 +312,16 @@ def get_options(options):
         option if isinstance(option, str) else
         option.target if hasattr(option, 'target') else
         None
-    for option in options ] if option ]
+    for option in options ] if option ] 
+
+def log(message):
+    print(message, file=stderr)
 
 def main():
-    timings = False
+    timings = True
     start = time.time()
     initialize()
+    recommend_init()
     if timings: print('initialize {} s'.format(time.time() - start), file=stderr)
 
     start = time.time()
@@ -327,22 +339,29 @@ def main():
     def enqueue_output(input, queue):
         for line in iter(input.readline, b''):
             queue.put(line)
+            log('put to queue: size - {}'.format(queue.qsize()))
 
+    # create a thread to put requests in a queue
     queue = Queue()
     thread = Thread(target=enqueue_output, args=(stdin, queue))
     thread.daemon = True
     thread.start()
 
+    recommend_executor = ThreadPoolExecutor(max_workers=1)
+
     bkg_start = time.time()
     keep_loading = True
-    while True:
-
+    while True:  
+        # loading all arguments is time consuming 
+        # load 10 arguments per loop until all are loaded finished
         if keep_loading:
             keep_loading = load_arguments(command_table, 10)
             if not keep_loading and timings: print('load_arguments {} s'.format(time.time() - bkg_start), file=stderr)
 
         try:
+            # non-blocking way to get request from the queue if keep loading
             line = queue.get_nowait() if keep_loading else queue.get()
+            log('line: {}'.format(line))
         except Empty:
             continue
         
@@ -353,11 +372,17 @@ def main():
             response_data = get_status()
             if timings: print('get_status {} s'.format(time.time() - start), file=stderr)
         elif request['data'].get('request') == 'hover':
+            # display highlight
             response_data = get_hover_text(group_index, command_table, request['data']['command'])
             if timings: print('get_hover_text {} s'.format(time.time() - start), file=stderr)
+        elif request['data'].get('request') == 'recommendation':
+            recommend_executor.submit(request_recommend_service, (request))
+            if timings: print('submit {} s'.format(time.time() - start), file=stderr)
+            continue
         else:
             response_data = get_completions(group_index, command_table, snippets, request['data'], True)
             if timings: print('get_completions {} s'.format(time.time() - start), file=stderr)
+
         response = {
             'sequence': request['sequence'],
             'data': response_data

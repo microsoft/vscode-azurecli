@@ -91,7 +91,7 @@ export class AzService {
         }, onCancel);
     }
 
-    private async send<T, R>(data: T, onCancel?: (handle: () => void) => void): Promise<R> {
+    async send<T, R>(data: T, onCancel?: (handle: () => void) => void): Promise<R> {
         const process = await this.getProcess();
         return new Promise<R>((resolve, reject) => {
             if (onCancel) {
@@ -117,9 +117,12 @@ export class AzService {
 
     private async getProcess(): Promise<ChildProcess> {
         if (this.process) {
+            console.log("process exists already");
             return this.process;
         }
         return this.process = (async () => {
+            console.log("begin to create process");
+            
             const { stdout } = await exec('az --version');
             let version = (
                 /azure-cli\s+\(([^)]+)\)/m.exec(stdout)
@@ -127,6 +130,8 @@ export class AzService {
                 || []
             )[1];
             if (version) {
+                console.log("version: " + version);
+                
                 const r = /[^-][a-z]/ig;
                 if (r.exec(version)) {
                     version = version.substr(0, r.lastIndex - 1) + '-' + version.substr(r.lastIndex - 1);
@@ -136,6 +141,7 @@ export class AzService {
                 throw 'wrongVersion';
             }
             const pythonLocation = (/^Python location '([^']*)'/m.exec(stdout) || [])[1];
+            console.log('pythonLocation: ' + pythonLocation)
             const processOptions = await this.getSpawnProcessOptions();
             return this.spawn(pythonLocation, processOptions);
         })().catch(err => {
