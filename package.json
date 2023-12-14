@@ -22,6 +22,7 @@
     "Azure"
   ],
   "main": "./out/src/extension",
+  "l10n": "./l10n",
   "contributes": {
     "languages": [
       {
