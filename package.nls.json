@@ -1,0 +1,9 @@
+{
+    "runLineInTerminal.title": "Run Line in Terminal",
+    "runLineInEditor.title": "Run Line in Editor",
+    "toggleLiveQuery.title": "Toggle Live Query",
+    "installAzureCLI.title": "Install the Azure CLI",
+    "configuration.title": "Azure CLI Tools Configuration",
+    "azureCLI.showResultInNewEditor.description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor.",
+    "azureCLI.lineContinuationCharacter.description": "Override the default continuation character (backtick [`] on Windows otherwise backslash [\\]) used for multiline commands"
+}

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as jmespath from 'jmespath';
-import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit,  } from 'vscode';
+import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit, l10n,  } from 'vscode';
 import * as process from "process";
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
@@ -180,7 +180,7 @@ class RunLineInEditor {
             this.runningCommandCount += 1;
             const t0 = Date.now();
             if (this.runningCommandCount === 1) {
-                this.statusBarItemText = `Azure CLI: Waiting for response`;
+                this.statusBarItemText = l10n.t('Azure CLI: Waiting for response');
                 this.statusBarUpdateInterval = setInterval(() => {
                     if (this.runningCommandCount === 1) {
                         this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner()}`;
@@ -197,7 +197,7 @@ class RunLineInEditor {
             this.query = undefined; // TODO
             return this.findResultDocument()
                 .then(document => window.showTextDocument(document, ViewColumn.Two, true))
-                .then(target => replaceContent(target, JSON.stringify({ 'Running command': command }) + '\n')
+                .then(target => replaceContent(target, JSON.stringify({ [l10n.t('Running command')]: command }) + '\n')
                     .then(() => exec(command))
                     .then(({ stdout }) => stdout, ({ stdout, stderr }) => JSON.stringify({ stderr, stdout }, null, '    '))
                     .then(content => replaceContent(target, content)
@@ -227,7 +227,7 @@ class RunLineInEditor {
         if (source.selection.isEmpty) {
             var lineNumber = source.selection.active.line;
             if (source.document.lineAt(lineNumber).text.length === 0) {
-                window.showInformationMessage<any>("Please put the cursor on a line that contains a command (or part of a command).");
+                window.showInformationMessage<any>(l10n.t("Please put the cursor on a line that contains a command (or part of a command)."));
                 return "";
             }
             
@@ -265,7 +265,7 @@ class RunLineInEditor {
                     var line = this.stripComments(source.document.lineAt(index).text);
 
                     if (line.trim().toLowerCase().startsWith(commandPrefix)) {
-                        window.showErrorMessage<any>("Multiple command selection not supported");
+                        window.showErrorMessage<any>(l10n.t("Multiple command selection not supported"));
                         return "";
                     }
 
@@ -317,7 +317,7 @@ class RunLineInEditor {
 
     private commandFinished(startTime: number) {
         this.runningCommandCount -= 1
-        this.statusBarItemText = 'Azure CLI: Executed in ' + (Date.now() - startTime) + ' milliseconds';
+        this.statusBarItemText = l10n.t('Azure CLI: Executed in {0} milliseconds', Date.now() - startTime);
         this.commandRunningStatusBarItem.text = this.statusBarItemText;
 
         if (this.runningCommandCount === 0) {
@@ -375,7 +375,7 @@ class RunLineInEditor {
                     const result = this.queryEnabled && this.query ? jmespath.search(this.parsedResult, this.query) : this.parsedResult;
                     replaceContent(resultEditor, JSON.stringify(result, null, '    '))
                         .then(undefined, console.error);
-                } catch (err) {
+                } catch (err: any) {
                     if (!(err && err.name === 'ParserError')) {
                         // console.error(err); Ignore because jmespath sometimes fails on partial queries.
                     }
@@ -463,10 +463,13 @@ function replaceContent(editor: TextEditor, content: string) {
 }
 
 async function azNotFound(wrongVersion: boolean): Promise<void> {
-    const message = wrongVersion ? '\'az\' >= 2.0.5 required, please update your installation.' : '\'az\' not found on PATH, please make sure it is installed.';
+    const message = 
+        wrongVersion
+            ? l10n.t("'az' >= 2.0.5 required, please update your installation.")
+            : l10n.t("'az' not found on PATH, please make sure it is installed.");
     const result = await window.showInformationMessage<any>(message,
         {
-            title: 'Documentation',
+            title: l10n.t('Documentation'),
             run: installAzureCLI
         }
     );
