@@ -23,6 +23,10 @@ parameters:
 extends:
   template: azure-pipelines/extension/stable.yml@templates
   parameters:
+    publishExtension: ${{ parameters.publishExtension }}
+  
+    l10nSourcePaths: ./src
+
     buildSteps:
       - script: npm install -ci
         displayName: Install dependencies
@@ -49,4 +53,3 @@ extends:
           - 'lszomoru@microsoft.com'
           - 'chrmarti@microsoft.com'
 
-  publishExtension: ${{ parameters.publishExtension }}

@@ -2,7 +2,7 @@
   "name": "azurecli",
   "displayName": "Azure CLI Tools",
   "description": "Tools for developing and running commands of the Azure CLI.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "icon": "images/azure_icon.png",
   "publisher": "ms-vscode",
   "repository": {
@@ -47,22 +47,22 @@
       {
         "category": "Azure CLI",
         "command": "ms-azurecli.runLineInTerminal",
-        "title": "Run Line in Terminal"
+        "title": "%runLineInTerminal.title%"
       },
       {
         "category": "Azure CLI",
         "command": "ms-azurecli.runLineInEditor",
-        "title": "Run Line in Editor"
+        "title": "%runLineInEditor.title%"
       },
       {
         "category": "Azure CLI",
         "command": "ms-azurecli.toggleLiveQuery",
-        "title": "Toggle Live Query"
+        "title": "%toggleLiveQuery.title%"
       },
       {
         "category": "Azure CLI",
         "command": "ms-azurecli.installAzureCLI",
-        "title": "Install the Azure CLI"
+        "title": "%installAzureCLI.title%"
       }
     ],
     "keybindings": [
@@ -87,19 +87,19 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Azure CLI Tools Configuration",
+      "title": "%configuration.title%",
       "properties": {
         "azureCLI.showResultInNewEditor": {
           "type": "boolean",
           "default": false,
           "scope": "resource",
-          "description": "Controls whether showing the result from running an Azure CLI command in an editor should always create a new editor."
+          "description": "%azureCLI.showResultInNewEditor.description%"
         },
         "azureCLI.lineContinuationCharacter": {
           "type": "string",
           "default": "",
           "scope": "resource",
-          "description": "Override the default continuation character (backtick [`] on Windows otherwise backslash [\\]) used for multiline commands"
+          "description": "%azureCLI.lineContinuationCharacter.description%"
         }
       }
     },
@@ -140,8 +140,8 @@
     "@types/jmespath": "0.15.0",
     "@types/node": "10.14.1",
     "@types/semver": "5.5.0",
-    "@types/vscode": "^1.35.0",
-    "typescript": "3.5.2"
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "jmespath": "0.15.0",
