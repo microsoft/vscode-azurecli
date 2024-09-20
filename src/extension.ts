@@ -11,7 +11,10 @@ import { parse, findNode } from './parser';
 import { exec } from './utils';
 import * as spinner from 'elegant-spinner';
 
-export function activate(context: ExtensionContext) {
+import * as vscode from 'vscode';
+import { copilotRequestHandler } from './copilotRequestHandler';
+
+export function activate(context: vscode.ExtensionContext) {
     const azService = new AzService(azNotFound);
     context.subscriptions.push(languages.registerCompletionItemProvider('azcli', new AzCompletionItemProvider(azService), ' '));
     context.subscriptions.push(languages.registerHoverProvider('azcli', new AzHoverProvider(azService)));
@@ -20,6 +23,10 @@ export function activate(context: ExtensionContext) {
     context.subscriptions.push(new RunLineInTerminal());
     context.subscriptions.push(new RunLineInEditor(status));
     context.subscriptions.push(commands.registerCommand('ms-azurecli.installAzureCLI', installAzureCLI));
+
+    const chatParticipant = vscode.chat.createChatParticipant("ms-azurecli.copilot", copilotRequestHandler);
+    context.subscriptions.push(chatParticipant);
+
 }
 
 const completionKinds: Record<CompletionKind, CompletionItemKind> = {
