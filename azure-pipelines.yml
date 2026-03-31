@@ -36,8 +36,14 @@ extends:
 
       - script: |
           set -e
-          docker-compose -f .devcontainer/docker-compose.test.yml build --no-cache --pull
-          docker-compose -f .devcontainer/docker-compose.test.yml run vscode-azurecli-test
+          sudo apt-get update
+          sudo apt-get install -y docker-compose-plugin
+        displayName: Install docker compose
+
+      - script: |
+          set -e
+          docker compose -f .devcontainer/docker-compose.test.yml build --no-cache --pull
+          docker compose -f .devcontainer/docker-compose.test.yml run vscode-azurecli-test
         displayName: Test extension
 
     tsa:
