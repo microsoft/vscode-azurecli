@@ -37,7 +37,7 @@ extends:
       - script: |
           set -e
           sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin
+          sudo apt-get install -y docker-compose-v2
         displayName: Install docker compose
 
       - script: |
