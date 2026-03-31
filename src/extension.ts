@@ -171,7 +171,11 @@ class RunLineInEditor {
         this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
         this.disposables.push(this.commandRunningStatusBarItem);
 
-        const spinnerFrames = (ora({ text: '' }).spinner as { frames: string[] }).frames;
+        const defaultFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        const spinnerDef = ora({ text: '' }).spinner;
+        const spinnerFrames = (spinnerDef && Array.isArray((spinnerDef as any).frames))
+            ? (spinnerDef as { frames: string[] }).frames
+            : defaultFrames;
         let spinnerIndex = 0;
         this.statusBarSpinner = () => {
             const frame = spinnerFrames[spinnerIndex];
