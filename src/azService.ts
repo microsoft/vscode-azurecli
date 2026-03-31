@@ -109,9 +109,13 @@ export class AzService {
                     }
                 }
             };
+            if (!process.stdin) {
+                reject(new Error('az-service process stdin is not available'));
+                return;
+            }
             const request: Message<T> = { sequence, data };
             const str = JSON.stringify(request);
-            process.stdin!.write(str + '\n', 'utf8');
+            process.stdin.write(str + '\n', 'utf8');
         });
     }
 
@@ -169,9 +173,10 @@ export class AzService {
     }
 
     private spawn(pythonLocation: string, processOptions?: SpawnOptions) {
-        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], processOptions ?? {});
-        process.stdout!.setEncoding('utf8');
-        process.stdout!.on('data', data => {
+        const options: SpawnOptions = { stdio: 'pipe', ...processOptions };
+        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], options);
+        (process.stdout as NodeJS.ReadableStream).setEncoding('utf8');
+        (process.stdout as NodeJS.ReadableStream).on('data', (data: string) => {
             this.data += data;
             const nl = this.data.indexOf('\n');
             if (nl !== -1) {
@@ -185,8 +190,8 @@ export class AzService {
                 }
             }
         });
-        process.stderr!.setEncoding('utf8');
-        process.stderr!.on('data', data => {
+        (process.stderr as NodeJS.ReadableStream).setEncoding('utf8');
+        (process.stderr as NodeJS.ReadableStream).on('data', (data: string) => {
             console.error(data);
         });
         process.on('error', err => {
@@ -201,6 +206,9 @@ export class AzService {
                 listener(`Python process terminated with exit code ${code}, signal ${signal}.`, undefined);
             }
         });
+        if (!process.stdin) {
+            throw new Error('Failed to open stdin for az-service process');
+        }
         return process;
     }
 }
