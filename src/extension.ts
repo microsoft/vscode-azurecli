@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as jmespath from 'jmespath';
+import { search as jmesearch, ParserError as JmesPathParserError } from './jmespath';
 import { HoverProvider, Hover, SnippetString, StatusBarAlignment, StatusBarItem, ExtensionContext, TextDocument, TextDocumentChangeEvent, Disposable, TextEditor, Selection, languages, commands, Range, ViewColumn, Position, CancellationToken, ProviderResult, CompletionItem, CompletionList, CompletionItemKind, CompletionItemProvider, window, workspace, env, Uri, WorkspaceEdit, l10n,  } from 'vscode';
 import * as process from "process";
 
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
-import * as spinner from 'elegant-spinner';
+import ora from 'ora';
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
@@ -156,7 +156,7 @@ class RunLineInEditor {
     private disposables: Disposable[] = [];
     private commandRunningStatusBarItem: StatusBarItem;
     private statusBarUpdateInterval!: NodeJS.Timer;
-    private statusBarSpinner = spinner();
+    private statusBarSpinner: () => string;
     private hideStatusBarItemTimeout! : NodeJS.Timeout;
     private statusBarItemText : string = '';
     // using backtick (`) as continuation character on Windows, backslash (\) on other systems
@@ -169,7 +169,15 @@ class RunLineInEditor {
         this.disposables.push(workspace.onDidChangeTextDocument(event => this.change(event)));
 
         this.commandRunningStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-        this.disposables.push(this.commandRunningStatusBarItem);        
+        this.disposables.push(this.commandRunningStatusBarItem);
+
+        const spinnerFrames = (ora({ text: '' }).spinner as { frames: string[] }).frames;
+        let spinnerIndex = 0;
+        this.statusBarSpinner = () => {
+            const frame = spinnerFrames[spinnerIndex];
+            spinnerIndex = (spinnerIndex + 1) % spinnerFrames.length;
+            return frame;
+        };
     }
 
     private runningCommandCount : number = 0;
@@ -372,11 +380,11 @@ class RunLineInEditor {
             const resultEditor = window.visibleTextEditors.find(editor => editor.document === this.resultDocument);
             if (resultEditor) {
                 try {
-                    const result = this.queryEnabled && this.query ? jmespath.search(this.parsedResult, this.query) : this.parsedResult;
+                    const result = this.queryEnabled && this.query ? jmesearch(this.parsedResult, this.query) : this.parsedResult;
                     replaceContent(resultEditor, JSON.stringify(result, null, '    '))
                         .then(undefined, console.error);
                 } catch (err: any) {
-                    if (!(err && err.name === 'ParserError')) {
+                    if (!(err instanceof JmesPathParserError)) {
                         // console.error(err); Ignore because jmespath sometimes fails on partial queries.
                     }
                 }

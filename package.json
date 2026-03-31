@@ -138,15 +138,13 @@
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
-    "@types/jmespath": "0.15.0",
     "@types/node": "10.14.1",
     "@types/semver": "5.5.0",
     "@types/vscode": "^1.75.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "jmespath": "0.15.0",
-    "semver": "7.5.2",
-    "elegant-spinner": "2.0.0"
+    "ora": "5.4.1",
+    "semver": "7.5.2"
   }
 }
