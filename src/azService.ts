@@ -111,7 +111,7 @@ export class AzService {
             };
             const request: Message<T> = { sequence, data };
             const str = JSON.stringify(request);
-            process.stdin.write(str + '\n', 'utf8');
+            process.stdin!.write(str + '\n', 'utf8');
         });
     }
 
@@ -169,9 +169,9 @@ export class AzService {
     }
 
     private spawn(pythonLocation: string, processOptions?: SpawnOptions) {
-        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], processOptions);
-        process.stdout.setEncoding('utf8');
-        process.stdout.on('data', data => {
+        const process = spawn(join(__dirname, `../../service/az-service${isWindows ? '.bat' : ''}`), [pythonLocation], processOptions ?? {});
+        process.stdout!.setEncoding('utf8');
+        process.stdout!.on('data', data => {
             this.data += data;
             const nl = this.data.indexOf('\n');
             if (nl !== -1) {
@@ -185,8 +185,8 @@ export class AzService {
                 }
             }
         });
-        process.stderr.setEncoding('utf8');
-        process.stderr.on('data', data => {
+        process.stderr!.setEncoding('utf8');
+        process.stderr!.on('data', data => {
             console.error(data);
         });
         process.on('error', err => {

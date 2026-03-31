@@ -155,7 +155,7 @@ class RunLineInEditor {
     private query: string | undefined;
     private disposables: Disposable[] = [];
     private commandRunningStatusBarItem: StatusBarItem;
-    private statusBarUpdateInterval!: NodeJS.Timer;
+    private statusBarUpdateInterval!: NodeJS.Timeout;
     private statusBarSpinner = spinner();
     private hideStatusBarItemTimeout! : NodeJS.Timeout;
     private statusBarItemText : string = '';
@@ -400,7 +400,7 @@ class StatusBarInfo {
     private status?: Status;
     public liveQuery = false;
 
-    private timer?: NodeJS.Timer;
+    private timer?: NodeJS.Timeout;
     private disposables: Disposable[] = [];
 
     constructor(private azService: AzService) {
