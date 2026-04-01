@@ -148,6 +148,6 @@
   "dependencies": {
     "jmespath": "0.15.0",
     "semver": "7.5.2",
-    "elegant-spinner": "2.0.0"
+    "ora": "4.1.1"
   }
 }
