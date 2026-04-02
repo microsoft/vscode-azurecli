@@ -148,6 +148,6 @@
   "dependencies": {
     "jmespath": "0.15.0",
     "semver": "7.5.2",
-    "ora": "4.1.1"
+    "ora": "9.3.0"
   }
 }

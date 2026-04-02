@@ -9,7 +9,6 @@ import * as process from "process";
 import { AzService, CompletionKind, Arguments, Status } from './azService';
 import { parse, findNode } from './parser';
 import { exec } from './utils';
-import ora = require('ora');
 
 export function activate(context: ExtensionContext) {
     const azService = new AzService(azNotFound);
@@ -156,13 +155,17 @@ class RunLineInEditor {
     private disposables: Disposable[] = [];
     private commandRunningStatusBarItem: StatusBarItem;
     private statusBarUpdateInterval!: NodeJS.Timeout;
-    private statusBarSpinner = ora();
+    private spinnerFrame: () => string = () => '';
     private hideStatusBarItemTimeout! : NodeJS.Timeout;
     private statusBarItemText : string = '';
     // using backtick (`) as continuation character on Windows, backslash (\) on other systems
     private continuationCharacter : string = process.platform === "win32" ? "`" : "\\";
 
     constructor(private status: StatusBarInfo) {
+        void import('ora').then(({ default: ora }) => {
+            const spinner = ora();
+            this.spinnerFrame = () => spinner.frame();
+        });
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.toggleLiveQuery', editor => this.toggleQuery(editor)));
         this.disposables.push(commands.registerTextEditorCommand('ms-azurecli.runLineInEditor', editor => this.run(editor)));
         this.disposables.push(workspace.onDidCloseTextDocument(document => this.close(document)));
@@ -183,10 +186,10 @@ class RunLineInEditor {
                 this.statusBarItemText = l10n.t('Azure CLI: Waiting for response');
                 this.statusBarUpdateInterval = setInterval(() => {
                     if (this.runningCommandCount === 1) {
-                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.statusBarSpinner.frame()}`;
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} ${this.spinnerFrame()}`;
                     }
                     else {
-                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.statusBarSpinner.frame()}`;
+                        this.commandRunningStatusBarItem.text = `${this.statusBarItemText} [${this.runningCommandCount}] ${this.spinnerFrame()}`;
                     }
                 }, 50);
             }
