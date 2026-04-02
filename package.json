@@ -141,13 +141,13 @@
   "devDependencies": {
     "@types/jmespath": "0.15.0",
     "@types/node": "^20.0.0",
-    "@types/semver": "5.5.0",
+    "@types/semver": "^7.7.1",
     "@types/vscode": "^1.75.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "elegant-spinner": "2.0.0",
     "jmespath": "0.15.0",
-    "semver": "7.5.2",
-    "elegant-spinner": "2.0.0"
+    "semver": "^7.7.4"
   }
 }
